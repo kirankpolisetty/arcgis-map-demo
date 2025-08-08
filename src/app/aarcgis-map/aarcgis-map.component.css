@@ -1,5 +1,64 @@
 :host {
     display: block;
     height: 100vh;
+}
+
+.tooltip-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tooltip-box {
+    position: absolute;
+    top: -60px;
+    left: -40px;
+    width: 140px;
+    font-size: 14px;
+    font-family: 'Arial', sans-serif;
+    background: white;
+    color: black;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0px 0px 6px rgba(0, 0, 0, 0.2);
+    z-index: 999;
+}
+
+.map-tooltip {
+    position: absolute;
+    pointer-events: none;
+    max-width: 300px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  /* Small triangle tail at bottom center */
+  .map-tooltip::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 8px 0 8px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+  }
+  
+  .map-tooltip.visible {
+    opacity: 1;
+  }
+  
+  .map-tooltip.hidden {
+    opacity: 0;
   }
   
