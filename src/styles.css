@@ -1,1 +1,9 @@
 /* You can add global styles to this file, and also import other style files */
+body {
+    zoom: 1.25;
+  }
+  
+  svg {
+    width: 800px;
+    height: 800px;
+  }
