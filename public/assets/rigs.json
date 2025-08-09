@@ -1,0 +1,94 @@
+[
+    {
+      "rigId": "RIG001",
+      "location": "Eastern Offshore Zone",
+      "classification": "green",
+      "lat": 26.2886,
+      "lng": 50.1383
+    },
+    {
+      "rigId": "RIG002",
+      "location": "Southern Basin",
+      "classification": "red",
+      "lat": 25.4321,
+      "lng": 49.9876
+    },
+    {
+      "rigId": "RIG003",
+      "location": "Northern Platform",
+      "classification": "yellow",
+      "lat": 27.1234,
+      "lng": 49.7654
+    },
+    {
+      "rigId": "RIG004",
+      "location": "Ghawar Field",
+      "classification": "green",
+      "lat": 25.0193,
+      "lng": 49.5614
+    },
+    {
+      "rigId": "RIG005",
+      "location": "Safaniya Field",
+      "classification": "red",
+      "lat": 27.467,
+      "lng": 48.52
+    },
+    {
+      "rigId": "RIG006",
+      "location": "Zuluf Field",
+      "classification": "red",
+      "lat": 27.28,
+      "lng": 49.16
+    },
+    {
+      "rigId": "RIG007",
+      "location": "Marjan Field",
+      "classification": "red",
+      "lat": 26.92,
+      "lng": 49.53
+    },
+    {
+      "rigId": "RIG008",
+      "location": "Berri Field",
+      "classification": "red",
+      "lat": 26.59,
+      "lng": 49.57
+    },
+    {
+      "rigId": "RIG009",
+      "location": "Khurais Field",
+      "classification": "green",
+      "lat": 25.0694,
+      "lng": 48.195
+    },
+    {
+      "rigId": "RIG010",
+      "location": "Manifa Field",
+      "classification": "green",
+      "lat": 25.0,
+      "lng": 49.0
+    },
+    {
+      "rigId": "RIG011",
+      "location": "Shaybah Field",
+      "classification": "green",
+      "lat": 22.5106,
+      "lng": 53.9519
+    },
+    {
+      "rigId": "RIG012",
+      "location": "Abqaiq Processing Hub",
+      "classification": "green",
+      "lat": 26.11,
+      "lng": 49.62
+    },
+    {
+      "rigId": "RIG013",
+      "location": "Qatif / Abu Safah Area",
+      "classification": "red",
+      "lat": 26.48,
+      "lng": 50.08
+    }
+  ]
+  
