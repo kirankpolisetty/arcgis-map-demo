@@ -19,8 +19,10 @@ import PointSymbol3D from '@arcgis/core/symbols/PointSymbol3D';
 import TextSymbol3DLayer from '@arcgis/core/symbols/TextSymbol3DLayer';
 import IconSymbol3DLayer from '@arcgis/core/symbols/IconSymbol3DLayer';
 import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
+import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 // First, add the import at the top of your file
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 
 // Configure labels for rigs
 @Component({
@@ -142,10 +144,10 @@ export class ArcgisMapComponent implements OnInit {
       map,
       center: [49.1383, 22.2886],
       zoom: 6,
-      constraints: {
-        minZoom: 6,
-        maxZoom: 6,
-      },
+      // constraints: {
+      //   minZoom: 6,
+      //   maxZoom: 6,
+      // },
       popup: {
         dockEnabled: true,
         dockOptions: {
@@ -154,15 +156,34 @@ export class ArcgisMapComponent implements OnInit {
         },
       },
     });
+
     // Create the graphics layer first
     const rigLayer = new GraphicsLayer();
+    map.add(rigLayer);
 
     const fieldLayer = new GraphicsLayer();
     map.addMany([rigLayer, fieldLayer]);
 
-    // Bubble text
+     for (let i = 0; i < this.rigs.length; i++) {
+      console.log(`RIGS *** #${i}: ${this.rigs[i].lat}, ${this.rigs[i].lng}`);
+    }
 
-    // Loop through rigs array to create markers
+
+    const adjustedBubble = this.adjustBubbles(this.rigs);
+    for (let i = 0; i < adjustedBubble.length; i++) {
+      console.log(`Bubble #${i}: ${adjustedBubble[i].lat}, ${adjustedBubble[i].lng}`);
+    }
+
+    // Bubble text
+    this.mapView.when(() => {
+      let i = 0;
+      this.rigs.forEach((rig) => {
+        this.addRigGraphic(rigLayer, rig, rig.latPos,rig.lngPos);
+        i += 1;
+      });
+    });
+
+    // // Loop through rigs array to create markers
     this.rigs.forEach((rig) => {
       const point = new Point({
         latitude: rig.lat,
@@ -184,135 +205,109 @@ export class ArcgisMapComponent implements OnInit {
           Classification: rig.classification,
         },
       });
-      console.log(rig.lat + ' lng position' + rig.lng);
 
-      //START rig.lat
-      // Stick from point to bubble
-      const stick = new Polyline({
-        paths: [
-          [
-            [rig.lng, rig.lat], // base
-            [2 + rig.lng, 2 + rig.lat], // bubble position
-          ],
-        ],
-      });
-
-      // [50.1383, 26.2886], // base
-      // [52.14, 26.29], // bubble position
-
-      const stickGraphic = new Graphic({
-        geometry: stick,
-        symbol: new SimpleLineSymbol({
-          color: 'black',
-          width: 2,
-        }),
-      });
-      //END
-
-      const textGraphic = new Graphic({
-        geometry: new Point({
-          longitude: 55.14,
-          latitude: 26.29,
-        }),
-        symbol: new TextSymbol({
-          text: 'RIG001\nActive',
-          color: 'red',
-          haloColor: 'black',
-          haloSize: '1px',
-          font: { size: 12, weight: 'bold' },
-        }),
-      });
-
-      //START
-
-      // Step 1: Circle background
-      const circleSymbol = new SimpleMarkerSymbol({
-        style: 'circle',
-        color: [255, 255, 0, 0.8], // Yellow with some transparency
-        size: 40, // Circle diameter in pixels
-        outline: {
-          color: [0, 0, 0, 255],
-          width: 1,
-        },
-      });
-
-      // 1️⃣ Circle background
-      const circleSymbol_2 = new SimpleMarkerSymbol({
-        style: 'square',
-        color: [255, 255, 255, 255], // Yellow with opacity
-        size: 80, // Circle diameter
-        outline: {
-          color: [0, 0, 0, 255], // Black border
-          width: 2,
-        },
-      });
-
-      // Step 2: Text overlay
-      const textSymbol = new TextSymbol({
-        text: `${rig.rigId}\n${rig.location}`,
-        color: 'black',
-        font: {
-          size: 12,
-          weight: 'bold',
-          family: 'Arial',
-        },
-        yoffset: -2, // Slight adjust so text is perfectly centered
-      });
-
-      // change sstart here.......
-      const point1 = new Point({
-        longitude: rig.lng + 3,
-        latitude: rig.lat + 3,
-      });
-      // Step 3: Same geometry for both
-      const circleGraphic = new Graphic({
-        geometry: point1,
-        symbol: circleSymbol_2,
-      });
-
-      const textGraphic_2 = new Graphic({
-        geometry: point1,
-        symbol: textSymbol,
-      });
-
-      // Step 4: Add both graphics to the same layer
-      rigLayer.addMany([circleGraphic, textGraphic_2]);
-      //END to HERE
-
-      rigLayer.addMany([
-        stickGraphic,
-        this.createLabelGraphic(
-          new Point({ longitude: rig.lng + 3, latitude: rig.lat + 3 }),
-          rig
-        ),
-      ]);
-      //chages end here....#2
-
-      // Update this line to pass the entire rig object
-      //   rigLayer.add(this.createLabelGraphic(point, rig));
-
-      rigLayer.add(graphic);
-
-      // Update the zoom watcher to handle multi-line labels better
-      this.zoomWatcher = reactiveUtils.watch(
-        () => this.mapView?.zoom,
-        (zoom) => {
-          if (zoom) {
-            const baseSize = Math.min(14, Math.max(10, 22 - zoom)); // Slightly smaller base size
-            rigLayer.graphics.forEach((g) => {
-              if (g.symbol instanceof TextSymbol) {
-                g.symbol.font.size = baseSize;
-                g.symbol.haloSize = baseSize / 12;
-                g.symbol.yoffset = 30 * (zoom / 7); // Dynamic offset based on zoom
-              }
-            });
-          }
-        },
-        { initial: true }
-      );
+      rigLayer.add(graphic); //Adding thge points to the graph.
+     
     });
 
     await this.mapView.when();
     console.log('Map initialized with rigs ✅');
   }
+
+  private addRigGraphic(layer: GraphicsLayer, rig: any, latPos: number, lngPos: number )  {
+    // Base point (rig location)
+    const rigPoint = new Point({ latitude: rig.lat, longitude: rig.lng });
+
+    console.log('[LAT]' + rig.lat + '[LNG]' + rig.lng);
+    // Bubble position slightly above/right of the point
+    const bubblePoint = new Point({
+      latitude: rig.lat + latPos,
+      longitude: rig.lng + lngPos,
+    });
+
+    // Draw stick line
+    const stick = new Polyline({
+      paths: [
+        [
+          [rig.lng, rig.lat],
+          [bubblePoint.longitude, bubblePoint.latitude],
+        ],
+      ],
+    });
+    const stickGraphic = new Graphic({
+      geometry: stick,
+      symbol: new SimpleLineSymbol({
+        color: [0, 0, 0],
+        width: 2,
+      }),
+    });
+    layer.add(stickGraphic);
+
+    // Draw bubble (circle)
+    const circleSymbol = new SimpleMarkerSymbol({
+      style: 'circle',
+      color: [255, 255, 255, 0.9],
+      size: 60,
+      outline: { color: [0, 0, 0], width: 2 },
+    });
+    const circleGraphic = new Graphic({
+      geometry: bubblePoint,
+      symbol: circleSymbol,
+    });
+    layer.add(circleGraphic);
+
+    // Add text
+    const textSymbol = new TextSymbol({
+      text: `${rig.rigId}\n${rig.location}`,
+      color: [0, 0, 0],
+      haloColor: [255, 255, 255, 255],
+      haloSize: 2,
+      font: { size: 12, weight: 'bold', family: 'Arial' },
+    });
+    const textGraphic = new Graphic({
+      geometry: bubblePoint,
+      symbol: textSymbol,
+    });
+    layer.add(textGraphic);
+  }
+
+
+  private adjustBubbles(
+    points: { lat: number; lng: number }[],
+    minDelta = 0.1
+  ) {
+    const adjusted: { lat: number; lng: number }[] = [];
+
+    points.forEach((p) => {
+      let candidate = { ...p };
+      let collision = true;
+      let angle = 0;
+      let step = 0.05; // degrees per move
+
+      while (collision) {
+        collision = false;
+        for (const placed of adjusted) {
+          const dLat = candidate.lat - placed.lat;
+          const dLng = candidate.lng - placed.lng;
+          const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+          if (dist < minDelta) {
+            collision = true;
+            break;
+          }
+        }
+        if (collision) {
+          angle += 30;
+          candidate.lat = p.lat + Math.sin((angle * Math.PI) / 180) * step;
+          candidate.lng = p.lng + Math.cos((angle * Math.PI) / 180) * step;
+        }
+      }
+
+      adjusted.push(candidate);
+    });
+
+    return adjusted;
+  }
 }
+
+// Avoid bubble overlap (distance in kilometers)
