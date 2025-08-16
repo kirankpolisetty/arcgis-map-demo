@@ -31,6 +31,15 @@ export class ArcgisMapComponent implements OnInit {
   private mapView: __esri.MapView | undefined;
   rigs: any[] = [];
 
+  // === CONSTANTS ===
+  private readonly MAP_CENTER: [number, number] = [48.1383, 24.2886];
+  private readonly MAP_ZOOM = 6;
+  private readonly MARKER_ICON = 'assets/oil-rig.svg';
+  private readonly MARKER_SIZE = '28px';
+  private readonly BUBBLE_SIZE = 60;
+  private readonly STICK_COLOR = [0, 0, 0];
+  private readonly TEXT_FONT = { size: 12, weight: 'bold', family: 'Arial' };
+
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private http: HttpClient
@@ -84,22 +93,15 @@ export class ArcgisMapComponent implements OnInit {
 
     // Create the map and view
     const map = new Map({ basemap: 'topo-vector' });
-    // First, ensure your MapView initialization includes proper popup configuration:
     this.mapView = new MapView({
       container: this.mapViewEl?.nativeElement,
       map,
-      center: [48.1383, 24.2886],
-      zoom: 6,
-      constraints: {
-        minZoom: 6,
-        maxZoom: 6,
-      },
+      center: this.MAP_CENTER,
+      zoom: this.MAP_ZOOM,
+      constraints: { minZoom: this.MAP_ZOOM, maxZoom: this.MAP_ZOOM },
       popup: {
         dockEnabled: true,
-        dockOptions: {
-          buttonEnabled: false,
-          breakpoint: false,
-        },
+        dockOptions: { buttonEnabled: false, breakpoint: false },
       },
     });
 
@@ -112,12 +114,6 @@ export class ArcgisMapComponent implements OnInit {
 
      for (let i = 0; i < this.rigs.length; i++) {
       console.log(`RIGS *** #${i}: ${this.rigs[i].lat}, ${this.rigs[i].lng}`);
-    }
-
-
-    const adjustedBubble = this.adjustBubbles(this.rigs);
-    for (let i = 0; i < adjustedBubble.length; i++) {
-      console.log(`Bubble #${i}: ${adjustedBubble[i].lat}, ${adjustedBubble[i].lng}`);
     }
 
     // Bubble text
@@ -137,9 +133,9 @@ export class ArcgisMapComponent implements OnInit {
       });
 
       const symbol = new PictureMarkerSymbol({
-        url: 'assets/oil-rig.svg',
-        width: '28px',
-        height: '28px',
+        url: this.MARKER_ICON,
+        width: this.MARKER_SIZE,
+        height: this.MARKER_SIZE,
       });
 
       const graphic = new Graphic({
@@ -193,8 +189,8 @@ export class ArcgisMapComponent implements OnInit {
     const circleSymbol = new SimpleMarkerSymbol({
       style: 'circle',
       color: [255, 255, 255, 0.9],
-      size: 60,
-      outline: { color: [0, 0, 0], width: 2 },
+      size: this.BUBBLE_SIZE,
+      outline: { color: this.STICK_COLOR, width: 2 },
     });
     const circleGraphic = new Graphic({
       geometry: bubblePoint,
@@ -205,7 +201,7 @@ export class ArcgisMapComponent implements OnInit {
     // Add text
     const textSymbol = new TextSymbol({
       text: `${rig.rigId}\n${rig.location}`,
-      color: [0, 0, 0],
+      color: this.STICK_COLOR,
       haloColor: [255, 255, 255, 255],
       haloSize: 2,
       font: { size: 12, weight: 'bold', family: 'Arial' },
