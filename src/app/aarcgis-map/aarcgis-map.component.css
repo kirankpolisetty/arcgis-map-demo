@@ -72,3 +72,50 @@ svg {
     opacity: 0;
 }
 
+.save-map-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.legend-box {
+    position: fixed;
+    top: 60px;
+    /* below the button */
+    right: 10px;
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.legend-color-green {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    background-color: rgba(0, 255, 0, 0.9);
+    /* green */
+    border: 1px solid #555;
+    vertical-align: middle;
+}
+
+.legend-color-red {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    background-color: rgba(255, 42, 0, 0.899);
+    /* green */
+    border: 1px solid #555;
+    vertical-align: middle;
+}

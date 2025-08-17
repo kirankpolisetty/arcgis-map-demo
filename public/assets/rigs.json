@@ -1,15 +1,15 @@
 [
   {
-    "rigId": "RIG004",
+    "rigId": "RIG001",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0193,
     "lng": 49.5614,
-    "latPos": 2.0,
+    "latPos": 1.0,
     "lngPos": 2.0
   },
   {
-    "rigId": "RIG005",
+    "rigId": "RIG002",
     "location": "WASI",
     "classification": "red",
     "lat": 27.467,
@@ -18,16 +18,16 @@
     "lngPos": -1.0
   },
   {
-    "rigId": "RIG006",
+    "rigId": "RIG003",
     "location": "WASI",
     "classification": "red",
     "lat": 27.28,
     "lng": 49.16,
-    "latPos": 2.0,
-    "lngPos": 2.0
+    "latPos": 4.0,
+    "lngPos": -1.0
   },
   {
-    "rigId": "RIG007",
+    "rigId": "RIG004",
     "location": "WASI",
     "classification": "red",
     "lat": 26.92,
@@ -36,7 +36,7 @@
     "lngPos": 1.0
   },
   {
-    "rigId": "RIG008",
+    "rigId": "RIG005",
     "location": "WASI",
     "classification": "red",
     "lat": 26.59,
@@ -45,16 +45,16 @@
     "lngPos": 5.0
   },
   {
-    "rigId": "RIG009",
+    "rigId": "RIG006",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0694,
     "lng": 48.195,
     "latPos": 5.0,
-    "lngPos": -4.0
+    "lngPos": -6.0
   },
   {
-    "rigId": "RIG010",
+    "rigId": "RIG007",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0,
@@ -63,7 +63,7 @@
     "lngPos": -4.0
   },
   {
-    "rigId": "RIG011",
+    "rigId": "RIG008",
     "location": "WASI",
     "classification": "green",
     "lat": 22.5106,
@@ -72,16 +72,16 @@
     "lngPos": 3.0
   },
   {
-    "rigId": "RIG012",
+    "rigId": "RIG009",
     "location": "WASI",
     "classification": "green",
     "lat": 26.11,
     "lng": 49.62,
-    "latPos": 4.0,
+    "latPos": 3.0,
     "lngPos": 4.0
   },
   {
-    "rigId": "RIG013",
+    "rigId": "RIG010",
     "location": "WASI",
     "classification": "red",
     "lat": 26.48,

@@ -36,8 +36,9 @@ export class ArcgisMapComponent implements OnInit {
   private readonly MAP_ZOOM = 6;
   private readonly MARKER_ICON = 'assets/oil-rig.svg';
   private readonly MARKER_SIZE = '28px';
-  private readonly BUBBLE_SIZE = 60;
-  private readonly STICK_COLOR = [0, 0, 0];
+  private readonly BUBBLE_SIZE = 50;
+  private readonly STICK_COLOR = [10, 40, 0];
+  private readonly BUBBLE_COLOR = [0, 255, 0, 0.9]
   private readonly TEXT_FONT = { size: 12, weight: 'bold', family: 'Arial' };
 
   constructor(
@@ -187,8 +188,8 @@ export class ArcgisMapComponent implements OnInit {
 
     // Draw bubble (circle)
     const circleSymbol = new SimpleMarkerSymbol({
-      style: 'circle',
-      color: [255, 255, 255, 0.9],
+      style: 'square',
+      color: this.BUBBLE_COLOR,
       size: this.BUBBLE_SIZE,
       outline: { color: this.STICK_COLOR, width: 2 },
     });
