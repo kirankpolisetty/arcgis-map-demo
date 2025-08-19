@@ -1,3 +1,5 @@
+
+
 import { isPlatformBrowser } from '@angular/common';
 import {
   Component,
@@ -17,6 +19,16 @@ import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
 // First, add the import at the top of your file
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import { WaterWell } from '../water-well';
+
+interface RigGraphics {
+  rigId: string | number; 
+  polyline: Polyline;
+  bubble: Point;
+  radius: number; // for bubble diameter
+}
+  const existing: RigGraphics[] = [];
+  
 
 // Configure labels for rigs
 @Component({
@@ -30,6 +42,7 @@ export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
   private mapView: __esri.MapView | undefined;
   rigs: any[] = [];
+  positionedWells: WaterWell[] = [];
 
   // === CONSTANTS ===
   private readonly MAP_CENTER: [number, number] = [48.1383, 24.2886];
@@ -38,8 +51,9 @@ export class ArcgisMapComponent implements OnInit {
   private readonly MARKER_SIZE = '28px';
   private readonly BUBBLE_SIZE = 50;
   private readonly STICK_COLOR = [10, 40, 0];
-  private readonly BUBBLE_COLOR = [0, 255, 0, 0.9]
+  private readonly BUBBLE_COLOR = [0, 255, 0, 0.9];
   private readonly TEXT_FONT = { size: 12, weight: 'bold', family: 'Arial' };
+
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -89,7 +103,7 @@ export class ArcgisMapComponent implements OnInit {
       import('@arcgis/core/Graphic'),
       import('@arcgis/core/layers/GraphicsLayer'),
       import('@arcgis/core/geometry/Point'),
-      import('@arcgis/core/symbols/PictureMarkerSymbol')
+      import('@arcgis/core/symbols/PictureMarkerSymbol'),
     ]);
 
     // Create the map and view
@@ -113,21 +127,27 @@ export class ArcgisMapComponent implements OnInit {
     const fieldLayer = new GraphicsLayer();
     map.addMany([rigLayer, fieldLayer]);
 
-     for (let i = 0; i < this.rigs.length; i++) {
+    for (let i = 0; i < this.rigs.length; i++) {
       console.log(`RIGS *** #${i}: ${this.rigs[i].lat}, ${this.rigs[i].lng}`);
     }
 
+   
+    
     // Bubble text
     this.mapView.when(() => {
       let i = 0;
-      this.rigs.forEach((rig) => {
-        this.addRigGraphic(rigLayer, rig, rig.latPos,rig.lngPos);
+      this.positionedWells.forEach((rig) => {
+        this.addRigGraphic(rigLayer, rig, rig.latPos, rig.lngPos);
         i += 1;
       });
     });
 
     // // Loop through rigs array to create markers
     this.rigs.forEach((rig) => {
+
+      const result = placeRigSquare(rig, existing, 0.0003, 3);
+      console.log("****[result]****"+result);
+
       const point = new Point({
         latitude: rig.lat,
         longitude: rig.lng,
@@ -150,18 +170,20 @@ export class ArcgisMapComponent implements OnInit {
       });
 
       rigLayer.add(graphic); //Adding thge points to the graph.
-     
     });
 
     await this.mapView.when();
     console.log('Map initialized with rigs ✅');
   }
 
-  private addRigGraphic(layer: GraphicsLayer, rig: any, latPos: number, lngPos: number )  {
+  private addRigGraphic(
+    layer: GraphicsLayer,
+    rig: any,
+    latPos: number,
+    lngPos: number
+  ) {
     // Base point (rig location)
     const rigPoint = new Point({ latitude: rig.lat, longitude: rig.lng });
-
-    console.log('[LAT]' + rig.lat + '[LNG]' + rig.lng);
     // Bubble position slightly above/right of the point
     const bubblePoint = new Point({
       latitude: rig.lat + latPos,
@@ -187,7 +209,7 @@ export class ArcgisMapComponent implements OnInit {
     layer.add(stickGraphic);
 
     // Draw bubble (circle)
-    const circleSymbol = new SimpleMarkerSymbol({
+    const squareSymbol = new SimpleMarkerSymbol({
       style: 'square',
       color: this.BUBBLE_COLOR,
       size: this.BUBBLE_SIZE,
@@ -195,7 +217,7 @@ export class ArcgisMapComponent implements OnInit {
     });
     const circleGraphic = new Graphic({
       geometry: bubblePoint,
-      symbol: circleSymbol,
+      symbol: squareSymbol,
     });
     layer.add(circleGraphic);
 
@@ -213,44 +235,98 @@ export class ArcgisMapComponent implements OnInit {
     });
     layer.add(textGraphic);
   }
+}
+// Helper: check overlap
+function isValidPlacement(
+  bubblePoint: Point | null | undefined,
+  existing: RigGraphics[],
+  bubbleRadius: number
+): boolean {
+  if (!bubblePoint) return false; // invalid point can't be placed
 
+  return !existing.some((e) => {
+    if (!e?.bubble) return false; // skip invalid existing bubbles
 
-  private adjustBubbles(
-    points: { lat: number; lng: number }[],
-    minDelta = 0.1
-  ) {
-    const adjusted: { lat: number; lng: number }[] = [];
+    const dx = bubblePoint.longitude! - e.bubble.longitude!;
+    const dy = bubblePoint.latitude! - e.bubble.latitude!;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    points.forEach((p) => {
-      let candidate = { ...p };
-      let collision = true;
-      let angle = 0;
-      let step = 0.05; // degrees per move
+    return distance < bubbleRadius * 2; // simple overlap check
+  });
+}
 
-      while (collision) {
-        collision = false;
-        for (const placed of adjusted) {
-          const dLat = candidate.lat - placed.lat;
-          const dLng = candidate.lng - placed.lng;
-          const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+function generateSquarePositions(
+  centerLat: number,
+  centerLng: number,
+  radius: number,
+  steps: number
+): Point[] {
+  const positions: Point[] = [];
 
-          if (dist < minDelta) {
-            collision = true;
-            break;
-          }
-        }
-        if (collision) {
-          angle += 30;
-          candidate.lat = p.lat + Math.sin((angle * Math.PI) / 180) * step;
-          candidate.lng = p.lng + Math.cos((angle * Math.PI) / 180) * step;
-        }
+  // Spiral out in a square pattern
+  for (let r = 1; r <= steps; r++) {
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        if (dx === 0 && dy === 0) continue; // skip center
+        positions.push(
+          new Point({
+            latitude: centerLat + dx * radius,
+            longitude: centerLng + dy * radius,
+            spatialReference: { wkid: 4326 },
+          })
+        );
       }
+    }
+  }
 
-      adjusted.push(candidate);
+  return positions;
+}
+
+export function placeRigSquare(
+  rig: any,
+  existing: RigGraphics[],
+  bubbleRadius = 0.0003,
+  steps = 3
+): { stickGraphic: Graphic; bubbleGraphic: Graphic } | null {
+  const candidatePositions = generateSquarePositions(rig.lat, rig.lng, bubbleRadius, steps);
+
+  for (const bubblePoint of candidatePositions) {
+    const stickLine = new Polyline({
+      paths: [[[rig.lng, rig.lat], [bubblePoint.longitude, bubblePoint.latitude]]],
+      spatialReference: { wkid: 4326 },
     });
 
-    return adjusted;
+    if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
+      existing.push({
+        rigId: rig.rigId,
+        polyline: stickLine,
+        bubble: bubblePoint,
+        radius: bubbleRadius,
+      });
+
+      const stickGraphic = new Graphic({
+        geometry: stickLine,
+        symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
+      });
+
+      const bubbleGraphic = new Graphic({
+        geometry: bubblePoint,
+        symbol: new SimpleMarkerSymbol({
+          style: "circle",
+          color: [0, 255, 0],
+          size: 20,
+          outline: { color: [0, 0, 0], width: 2 },
+        }),
+      });
+
+      return { stickGraphic, bubbleGraphic };
+    }
   }
+
+  console.warn(`⚠️ Could not place bubble for ${rig.rigId} without overlap`);
+  return null;
 }
+
+
 
 // Avoid bubble overlap (distance in kilometers)
