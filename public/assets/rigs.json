@@ -88,5 +88,42 @@
     "lng": 48.52,
     "latPos": 1.0,
     "lngPos": 2.0
+  },
+  {
+    "rigId": "RIG011",
+    "location": "WASI",
+    "classification": "green",
+    "lat": 24.75,
+    "lng": 50.35,
+    "latPos": 2.0,
+    "lngPos": -1.5
+  },
+  {
+    "rigId": "RIG012",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 25.45,
+    "lng": 49.75,
+    "latPos": -2.5,
+    "lngPos": 2.5
+  },
+  {
+    "rigId": "RIG013",
+    "location": "WASI",
+    "classification": "green",
+    "lat": 26.35,
+    "lng": 48.95,
+    "latPos": 3.0,
+    "lngPos": -3.0
+  },
+  {
+    "rigId": "RIG014",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 27.05,
+    "lng": 49.85,
+    "latPos": -1.5,
+    "lngPos": 1.5
   }
+  
 ]
