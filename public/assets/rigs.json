@@ -124,6 +124,15 @@
     "lng": 49.85,
     "latPos": -1.5,
     "lngPos": 1.5
+  },
+  {
+    "rigId": "RIG015",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 24.05,
+    "lng": 49.85,
+    "latPos": -1.5,
+    "lngPos": 1.5
   }
   
 ]

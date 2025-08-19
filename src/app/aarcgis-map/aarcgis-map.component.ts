@@ -35,6 +35,8 @@ const STYLE = {
   bubbleColor: [0, 255, 0, 0.9],
   textFont: { size: 10, weight: 'bold', family: 'Arial' },
 };
+const NO_OF_ATTEMPTS = 2;
+const BUBBLE_RADIUS = 2;
 
 @Component({
   selector: 'app-arcgis-map',
@@ -77,6 +79,8 @@ export class ArcgisMapComponent implements OnInit {
       import('@arcgis/core/symbols/PictureMarkerSymbol'),
     ]);
 
+    let missToPlotArray: Rig[] = [];
+
     const map = new Map({ basemap: 'topo-vector' });
     this.mapView = new MapView({
       container: this.mapViewEl?.nativeElement,
@@ -93,8 +97,35 @@ export class ArcgisMapComponent implements OnInit {
     this.mapView.when(() => {
       for (const rig of this.rigs) {
         const result = placeRigSquare(rig, existing, 2, 3);
-        if (result) this.addRigGraphic(rigLayer, rig, result);
-        else console.warn(`❌ Could not place bubble for ${rig.rigId}`);
+        if (result) {
+          this.addRigGraphic(rigLayer, rig, result);
+        } else {
+          console.warn(`❌ Could not place bubble for >>> ${rig.rigId}`);
+          missToPlotArray.push(rig);
+        }
+      }
+
+      console.log('missToPlotArray size is ..... ' + missToPlotArray.length);
+
+      // Retry with higher step count
+      if (missToPlotArray.length > 0) {
+        const retrySteps = NO_OF_ATTEMPTS * 2;
+        console.log('Retrying missed rigs with steps:', retrySteps);
+
+        missToPlotArray.forEach((rig) => {
+          const result = placeRigSquare(
+            rig,
+            existing,
+            BUBBLE_RADIUS * 1,
+            retrySteps
+          );
+          if (!result) {
+            console.error(`❌ Still could not place bubble for ${rig.rigId}`);
+          } else {
+            this.addRigGraphic(rigLayer, rig, result);
+            missToPlotArray.pop();
+          }
+        });
       }
     });
 
