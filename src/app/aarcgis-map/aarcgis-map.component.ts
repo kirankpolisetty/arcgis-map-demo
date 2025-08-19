@@ -7,28 +7,56 @@ import {
   PLATFORM_ID,
   ViewChild,
 } from '@angular/core';
-// Add to your existing imports
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+
+// ArcGIS core
 import Graphic from '@arcgis/core/Graphic';
 import Point from '@arcgis/core/geometry/Point';
 import Polyline from '@arcgis/core/geometry/Polyline';
 import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
 import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-// First, add the import at the top of your file
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+
 import { WaterWell } from '../water-well';
 
+// === TYPES ===
+interface Rig {
+  rigId: string;
+  lat: number;
+  lng: number;
+  location: string;
+  classification: string;
+}
 interface RigGraphics {
-  rigId: string | number;
+  rigId: string;
   polyline: Polyline;
   bubble: Point;
-  radius: number; // for bubble diameter
+  radius: number;
 }
-const existing: RigGraphics[] = [];
-const graphics: { stickGraphic: Graphic; bubbleGraphic: Graphic }[] = [];
+interface RigResult {
+  stickGraphic: Graphic;
+  bubbleGraphic: Graphic;
+}
 
-// Configure labels for rigs
+// === GLOBAL STATE ===
+const existing: RigGraphics[] = [];
+
+// === CONFIG ===
+const MAP_CONFIG = {
+  center: [48.1383, 24.2886] as [number, number],
+  zoom: 6,
+};
+const STYLE = {
+  markerIcon: 'assets/oil-rig.svg',
+  markerSize: '28px',
+  bubbleSize: 20,
+  squareSize: 40,
+  stickColor: [10, 40, 0],
+  bubbleColor: [0, 255, 0, 0.9],
+  textFont: { size: 12, weight: 'bold', family: 'Arial' },
+};
+
 @Component({
   selector: 'app-arcgis-map',
   imports: [HttpClientModule],
@@ -38,173 +66,96 @@ const graphics: { stickGraphic: Graphic; bubbleGraphic: Graphic }[] = [];
 })
 export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
-  private mapView: __esri.MapView | undefined;
-  rigs: any[] = [];
-  positionedWells: WaterWell[] = [];
-
-  // === CONSTANTS ===
-  private readonly MAP_CENTER: [number, number] = [48.1383, 24.2886];
-  private readonly MAP_ZOOM = 6;
-  private readonly MARKER_ICON = 'assets/oil-rig.svg';
-  private readonly MARKER_SIZE = '28px';
-  private readonly BUBBLE_SIZE = 50;
-  private readonly STICK_COLOR = [10, 40, 0];
-  private readonly BUBBLE_COLOR = [0, 255, 0, 0.9];
-  private readonly TEXT_FONT = { size: 12, weight: 'bold', family: 'Arial' };
+  private mapView?: __esri.MapView;
+  rigs: Rig[] = [];
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private http: HttpClient
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.http.get<any[]>('assets/rigs.json').subscribe((data) => {
+    this.http.get<Rig[]>('assets/rigs.json').subscribe((data) => {
       this.rigs = data || [];
       this.initMap();
     });
-
-    // Dynamic popup on hover
-    console.log('🛢️ Map loaded with rigs and fields, dynamic popup enabled!');
   }
 
-  async saveMapImage() {
-    if (!this.mapView) return alert('Map is not ready yet!');
-    try {
-      const screenshot = await this.mapView.takeScreenshot({
-        format: 'png',
-        quality: 1,
-      });
-      const a = document.createElement('a');
-      a.href = screenshot.dataUrl;
-      a.download = 'active-rigs-map.png';
-      a.click();
-    } catch (error) {
-      console.error('Error taking screenshot:', error);
-    }
-  }
-
-  async initMap(): Promise<void> {
-    // Import ArcGIS modules dynamically
+  private async initMap(): Promise<void> {
     const [
       { default: Map },
       { default: MapView },
-      { default: Graphic },
       { default: GraphicsLayer },
       { default: Point },
       { default: PictureMarkerSymbol },
     ] = await Promise.all([
       import('@arcgis/core/Map'),
       import('@arcgis/core/views/MapView'),
-      import('@arcgis/core/Graphic'),
       import('@arcgis/core/layers/GraphicsLayer'),
       import('@arcgis/core/geometry/Point'),
       import('@arcgis/core/symbols/PictureMarkerSymbol'),
     ]);
 
-    // Create the map and view
     const map = new Map({ basemap: 'topo-vector' });
     this.mapView = new MapView({
       container: this.mapViewEl?.nativeElement,
       map,
-      center: this.MAP_CENTER,
-      zoom: this.MAP_ZOOM,
-      constraints: { minZoom: this.MAP_ZOOM, maxZoom: this.MAP_ZOOM },
-      popup: {
-        dockEnabled: true,
-        dockOptions: { buttonEnabled: false, breakpoint: false },
-      },
+      center: MAP_CONFIG.center,
+      zoom: MAP_CONFIG.zoom,
+      constraints: { minZoom: MAP_CONFIG.zoom, maxZoom: MAP_CONFIG.zoom },
     });
 
-    // Create the graphics layer first
     const rigLayer = new GraphicsLayer();
     map.add(rigLayer);
 
-    const fieldLayer = new GraphicsLayer();
-    map.addMany([rigLayer, fieldLayer]);
-
-    for (let i = 0; i < this.rigs.length; i++) {
-      console.log(`RIGS *** #${i}: ${this.rigs[i].lat}, ${this.rigs[i].lng}`);
-    }
-
-    //  This is to add the SVG oil Rig to the map
+    // Place rigs
     this.mapView.when(() => {
-      let i = 0;
-      this.rigs.forEach((rig) => {
-         const result = placeRigSquare(rig, existing, 2, 3);
-        if (result) {
-          this.addRigGraphic(rigLayer, rig, result);
-          console.log('Stick Graphic:***', result.stickGraphic);
-          console.log('Bubble Graphic****:', result.bubbleGraphic);
-        } else {
-          console.warn('Could not place rig:', rig.rigId);
-        }
-        i += 1;
-      });
+      for (const rig of this.rigs) {
+        const result = placeRigSquare(rig, existing, 2, 3.5);
+        if (result) this.addRigGraphic(rigLayer, rig, result);
+        else console.warn(`❌ Could not place bubble for ${rig.rigId}`);
+      }
     });
 
-    // // Loop through rigs array to create markers and sticks
-    this.rigs.forEach((rig) => {
-      const point = new Point({
-        latitude: rig.lat,
-        longitude: rig.lng,
-      });
-
-      const symbol = new PictureMarkerSymbol({
-        url: this.MARKER_ICON,
-        width: this.MARKER_SIZE,
-        height: this.MARKER_SIZE,
-      });
-
-      const graphic = new Graphic({
-        geometry: point,
-        symbol,
-        attributes: {
-          RigId: rig.rigId,
-          Location: rig.location,
-          Classification: rig.classification,
-        },
-      });
-
-      rigLayer.add(graphic); //Adding thge points to the graph.
+    this.rigs.forEach((rig) => 
+      { const point = new Point({ latitude: rig.lat, longitude: rig.lng, }     
+      );
+      const symbol = new PictureMarkerSymbol({ url: STYLE.markerIcon, width: STYLE.bubbleSize, height: STYLE.markerSize, });
+      const graphic = new Graphic({ geometry: point, symbol, attributes: { RigId: rig.rigId, Location: rig.location, Classification: rig.classification, }, });
+      rigLayer.add(graphic); //Adding thge points to the graph. });
     });
+
+    
 
     await this.mapView.when();
-    console.log('Map initialized with rigs ✅');
+    console.log('✅ Map initialized with rigs');
   }
 
   private addRigGraphic(
     layer: GraphicsLayer,
-    rig: any,
-    result: { stickGraphic: Graphic; bubbleGraphic: Graphic } | null
+    rig: Rig,
+    result: RigResult
   ) {
-    if (!result) {
-      console.warn(`Could not place rig: ${rig.rigId}`);
-      return;
-    }
+    const { stickGraphic, bubbleGraphic } = result;
+    layer.addMany([stickGraphic, bubbleGraphic]);
 
-    // Add stick and bubble graphics
-    layer.add(result.stickGraphic);
-    layer.add(result.bubbleGraphic);
-
-    // Add text label at bubble position
-    const bubblePoint = result.bubbleGraphic.geometry!;
     const textSymbol = new TextSymbol({
       text: `${rig.rigId}\n${rig.location}`,
-      color: this.STICK_COLOR,
+      color: STYLE.stickColor,
       haloColor: [255, 255, 255, 255],
       haloSize: 2,
       font: { size: 12, weight: 'bold', family: 'Arial' },
     });
-    const textGraphic = new Graphic({
-      geometry: bubblePoint,
-      symbol: textSymbol,
-    });
-    layer.add(textGraphic);
+
+    layer.add(new Graphic({ geometry: bubbleGraphic.geometry!, symbol: textSymbol }));
   }
+  
+  async saveMapImage() { if (!this.mapView) return alert('Map is not ready yet!'); try { const screenshot = await this.mapView.takeScreenshot({ format: 'png', quality: 1, }); const a = document.createElement('a'); a.href = screenshot.dataUrl; a.download = 'active-rigs-map.png'; a.click(); } catch (error) { console.error('Error taking screenshot:', error); } }
 }
-// Helper: check overlap
+
+// === HELPERS ===
 function isValidPlacement(
   bubblePoint: Point | null | undefined,
   existing: RigGraphics[],
@@ -223,86 +174,56 @@ function isValidPlacement(
   });
 }
 
-function generateSquarePositions(
-  centerLat: number,
-  centerLng: number,
-  radius: number,
-  steps: number
-): Point[] {
-  const positions: Point[] = [];
 
-  // Spiral out in a square pattern
+function generateSquarePositions(lat: number, lng: number, radius: number, steps: number): Point[] {
+  const positions: Point[] = [];
   for (let r = 1; r <= steps; r++) {
     for (let dx = -r; dx <= r; dx++) {
       for (let dy = -r; dy <= r; dy++) {
-        if (dx === 0 && dy === 0) continue; // skip center
-        positions.push(
-          new Point({
-            latitude: centerLat + dx * radius,
-            longitude: centerLng + dy * radius,
+        if (dx || dy) {
+          positions.push(new Point({
+            latitude: lat + dx * radius,
+            longitude: lng + dy * radius,
             spatialReference: { wkid: 4326 },
-          })
-        );
+          }));
+        }
       }
     }
   }
-
   return positions;
 }
 
-export function placeRigSquare(
-  rig: any,
+function placeRigSquare(
+  rig: Rig,
   existing: RigGraphics[],
   bubbleRadius = 0.0003,
   steps = 4
-): { stickGraphic: Graphic; bubbleGraphic: Graphic } | null {
-  const candidatePositions = generateSquarePositions(
-    rig.lat,
-    rig.lng,
-    bubbleRadius,
-    steps
-  );
-
-  for (const bubblePoint of candidatePositions) {
-    const stickLine = new Polyline({
-      paths: [
-        [
-          [rig.lng, rig.lat],
-          [bubblePoint.longitude, bubblePoint.latitude],
-        ],
-      ],
-      spatialReference: { wkid: 4326 },
-    });
-
+): RigResult | null {
+  for (const bubblePoint of generateSquarePositions(rig.lat, rig.lng, bubbleRadius, steps)) {
     if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
-      existing.push({
-        rigId: rig.rigId,
-        polyline: stickLine,
-        bubble: bubblePoint,
-        radius: bubbleRadius,
+      const stickLine = new Polyline({
+        paths: [[[rig.lng, rig.lat], [ bubblePoint.longitude! , bubblePoint.latitude!]]],
+        spatialReference: { wkid: 4326 },
       });
 
-      const stickGraphic = new Graphic({
-        geometry: stickLine,
-        symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
-      });
+      existing.push({ rigId: rig.rigId, polyline: stickLine, bubble: bubblePoint, radius: bubbleRadius });
 
-      const bubbleGraphic = new Graphic({
-        geometry: bubblePoint,
-        symbol: new SimpleMarkerSymbol({
-          style: 'square',
-          color: [0, 255, 0],
-          size: 40,
-          outline: { color: [0, 0, 0], width: 2 },
+      return {
+        stickGraphic: new Graphic({
+          geometry: stickLine,
+          symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
         }),
-      });
-
-      return { stickGraphic, bubbleGraphic };
+        bubbleGraphic: new Graphic({
+          geometry: bubblePoint,
+          symbol: new SimpleMarkerSymbol({
+            style: 'square',
+            color: STYLE.bubbleColor,
+            size: STYLE.squareSize,
+            outline: { color: [0, 0, 0], width: 1 },
+          }),
+        }),
+      };
     }
   }
-
-  console.warn(`⚠️ Could not place bubble for ${rig.rigId} without overlap`);
   return null;
 }
-
-// Avoid bubble overlap (distance in kilometers)
