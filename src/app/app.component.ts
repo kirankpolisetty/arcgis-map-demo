@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterModule, RouterOutlet } from '@angular/router';
 import { ArcgisMapComponent } from './aarcgis-map/aarcgis-map.component'; 
 
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ArcgisMapComponent],
-  template: `<app-arcgis-map></app-arcgis-map>`,
+  imports: [RouterModule],
+  template: `<router-outlet></router-outlet>`,
   styleUrl: './app.component.css'
 })
 export class AppComponent {
