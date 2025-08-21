@@ -12,15 +12,28 @@ import {
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { BUBBLE_RADIUS, MAP_CONFIG, MAP_STYLE, NO_OF_ATTEMPTS } from '../utils/map.config';
 import { placeRigSquare } from '../utils/rig-placement.utils';
 import { Rig, RigGraphics, RigResult } from '../water-well';
 
 // === GLOBAL STATE ===
 const existing: RigGraphics[] = [];
+
 // === CONFIG ===
-const LAT_RANGE = { min: 20, max: 100 }; // example: only allow between 20°N and 30°N
-const LNG_RANGE = { min: 20, max: 100 }; // optional: restrict longitude as well
+const MAP_CONFIG = {
+  center: [48.1383, 24.2886] as [number, number],
+  zoom: 6,
+};
+const STYLE = {
+  markerIcon: 'assets/oil-rig.svg',
+  markerSize: '28px',
+  bubbleSize: 20,
+  squareSize: 40,
+  stickColor: [10, 40, 0],
+  bubbleColor: [0, 255, 0, 0.9],
+  textFont: { size: 10, weight: 'bold', family: 'Arial' },
+};
+const NO_OF_ATTEMPTS = 2;
+const BUBBLE_RADIUS = 2;
 
 @Component({
   selector: 'app-arcgis-map',
@@ -116,9 +129,9 @@ export class ArcgisMapComponent implements OnInit {
     this.rigs.forEach((rig) => {
       const point = new Point({ latitude: rig.lat, longitude: rig.lng });
       const symbol = new PictureMarkerSymbol({
-        url: MAP_STYLE.markerIcon,
-        width: MAP_STYLE.bubbleSize,
-        height: MAP_STYLE.markerSize,
+        url: STYLE.markerIcon,
+        width: STYLE.bubbleSize,
+        height: STYLE.markerSize,
       });
       const graphic = new Graphic({
         geometry: point,
@@ -142,7 +155,7 @@ export class ArcgisMapComponent implements OnInit {
 
     const textSymbol = new TextSymbol({
       text: `${rig.rigId}\n${rig.location}`,
-      color: MAP_STYLE.stickColor,
+      color: STYLE.stickColor,
       haloColor: [255, 255, 255, 255],
       haloSize: 2,
       font: { size: 12, weight: 'bold', family: 'Arial' },

@@ -4,21 +4,26 @@ import Polyline from "@arcgis/core/geometry/Polyline";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import { MAP_STYLE } from "./map.config";
+import { LAT_RANGE, LNG_RANGE, MAP_STYLE } from "./map.config";
 
-export function isValidPlacement(bubblePoint: Point | null | undefined , 
-    existing: RigGraphics[],
-    bubbleRadius: number
+
+// === HELPERS ===
+export function isValidPlacement(
+  bubblePoint: Point | null | undefined,
+  existing: RigGraphics[],
+  bubbleRadius: number
 ): boolean {
-    if(!bubblePoint) { return false };
-    return !existing.some((e)=> {
-        if(!e.bubble) return false;
-        const dx = bubblePoint.longitude! - e.bubble.longitude!;
-        const dy = bubblePoint.latitude! - e.bubble.latitude!;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < bubbleRadius;
-    });
+  if (!bubblePoint) return false; // invalid point can't be placed
 
+  return !existing.some((e) => {
+    if (!e?.bubble) return false; // skip invalid existing bubbles
+
+    const dx = bubblePoint.longitude! - e.bubble.longitude!;
+    const dy = bubblePoint.latitude! - e.bubble.latitude!;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    return distance < bubbleRadius * 2; // simple overlap check
+  });
 }
 
 export function generateSquarePositions(
@@ -46,6 +51,15 @@ export function generateSquarePositions(
   return positions;
 }
 
+export function isWithinBounds(point: Point): boolean {
+  return (
+    point.latitude! >= LAT_RANGE.min &&
+    point.latitude! <= LAT_RANGE.max &&
+    point.longitude! >= LNG_RANGE.min &&
+    point.longitude! <= LNG_RANGE.max
+  );
+}
+
 
 export function placeRigSquare(
   rig: Rig,
@@ -59,6 +73,8 @@ export function placeRigSquare(
     bubbleRadius,
     steps
   )) {
+   // if (!isWithinBounds(bubblePoint)) continue;
+
     if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
       const stickLine = new Polyline({
         paths: [
@@ -70,6 +86,7 @@ export function placeRigSquare(
         spatialReference: { wkid: 4326 },
       });
 
+      console.log("*[Longitude]*" +bubblePoint.longitude + "*[Latitide]*"+bubblePoint.latitude);
       existing.push({
         rigId: rig.rigId,
         polyline: stickLine,

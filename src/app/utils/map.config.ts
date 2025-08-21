@@ -15,3 +15,7 @@ export const MAP_CONFIG = {
 };
 export const NO_OF_ATTEMPTS = 2;
 export const BUBBLE_RADIUS = 2;
+
+// === CONFIG ===
+export const LAT_RANGE = { min: 20, max: 100 }; // example: only allow between 20°N and 30°N
+export const LNG_RANGE = { min: 20, max: 100 }; // optional: restrict longitude as well
