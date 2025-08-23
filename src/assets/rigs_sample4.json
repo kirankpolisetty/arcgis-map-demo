@@ -1,0 +1,72 @@
+[
+  {
+    "rigId": "RIG001",
+    "location": "Ghawar",
+    "classification": "eastern",
+    "lat": 25.0833,
+    "lng": 49.8000
+  },
+  {
+    "rigId": "RIG002",
+    "location": "Safaniya",
+    "classification": "eastern",
+    "lat": 27.4000,
+    "lng": 50.1667
+  },
+  {
+    "rigId": "RIG003",
+    "location": "Khursaniyah",
+    "classification": "eastern",
+    "lat": 20.2500,
+    "lng": 49.6333
+  },
+  {
+    "rigId": "RIG004",
+    "location": "Abqaiq",
+    "classification": "eastern",
+    "lat": 26.2500,
+    "lng": 49.6500
+  },
+  {
+    "rigId": "RIG005",
+    "location": "Berri",
+    "classification": "eastern",
+    "lat": 26.3167,
+    "lng": 50.0333
+  },
+  {
+    "rigId": "RIG006",
+    "location": "Shaybah",
+    "classification": "eastern",
+    "lat": 19.9000,
+    "lng": 52.7000
+  },
+  {
+    "rigId": "RIG007",
+    "location": "Dammam",
+    "classification": "eastern",
+    "lat": 26.4333,
+    "lng": 50.1000
+  },
+  {
+    "rigId": "RIG008",
+    "location": "Hofuf",
+    "classification": "eastern",
+    "lat": 25.3547,
+    "lng": 49.5867
+  },
+  {
+    "rigId": "RIG009",
+    "location": "Qatif",
+    "classification": "eastern",
+    "lat": 26.5833,
+    "lng": 50.0333
+  },
+  {
+    "rigId": "RIG010",
+    "location": "Ras Tanura",
+    "classification": "eastern",
+    "lat": 26.7167,
+    "lng": 50.0833
+  }
+]

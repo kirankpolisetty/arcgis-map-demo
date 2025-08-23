@@ -21,7 +21,8 @@ const existing: RigGraphics[] = [];
 // === CONFIG ===
 const MAP_CONFIG = {
   center: [48.1383, 24.2886] as [number, number],
-  zoom: 6,
+  minZoom: 6,
+  maxZoom: 7
 };
 const STYLE = {
   markerIcon: 'assets/oil-rig.svg',
@@ -55,7 +56,7 @@ export class ArcgisMapComponent implements OnInit {
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.http.get<Rig[]>('assets/rigs.json').subscribe((data) => {
+    this.http.get<Rig[]>('assets/rigs_sample4.json').subscribe((data) => {
       this.rigs = data || [];
       this.initMap();
     });
@@ -83,8 +84,8 @@ export class ArcgisMapComponent implements OnInit {
       container: this.mapViewEl?.nativeElement,
       map,
       center: MAP_CONFIG.center,
-      zoom: MAP_CONFIG.zoom,
-      constraints: { minZoom: MAP_CONFIG.zoom, maxZoom: MAP_CONFIG.zoom },
+      zoom: MAP_CONFIG.minZoom,
+      constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom },
     });
 
     const rigLayer = new GraphicsLayer();
@@ -113,7 +114,7 @@ export class ArcgisMapComponent implements OnInit {
           const result = placeRigSquare(
             rig,
             existing,
-            BUBBLE_RADIUS * 1,
+            BUBBLE_RADIUS * 2,
             retrySteps
           );
           if (!result) {

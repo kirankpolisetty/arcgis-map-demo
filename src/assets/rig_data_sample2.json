@@ -4,89 +4,104 @@
     "location": "WASI",
     "classification": "green",
     "lat": 22.5106,
-    "lng": 53.9519,
-    "latPos": 1.0,
-    "lngPos": 1.0
+    "lng": 53.9519
   },
   {
     "rigId": "RIG002",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0,
-    "lng": 49.0,
-    "latPos": 2.0,
-    "lngPos": 2.0
+    "lng": 49.0
   },
   {
     "rigId": "RIG003",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0193,
-    "lng": 49.5614,
-    "latPos": -1.0,
-    "lngPos": -1.0
+    "lng": 49.5614
   },
   {
     "rigId": "RIG004",
     "location": "WASI",
     "classification": "green",
     "lat": 25.0694,
-    "lng": 48.195,
-    "latPos": -2.0,
-    "lngPos": -2.0
+    "lng": 48.195
   },
   {
     "rigId": "RIG005",
     "location": "WASI",
     "classification": "green",
     "lat": 26.11,
-    "lng": 49.62,
-    "latPos": -4.0,
-    "lngPos": 4.0
+    "lng": 49.62
   },
   {
     "rigId": "RIG016",
     "location": "WASI",
     "classification": "red",
     "lat": 26.48,
-    "lng": 50.08,
-    "latPos": -3.0,
-    "lngPos": 3.0
+    "lng": 50.08
   },
   {
     "rigId": "RIG007",
     "location": "WASI",
     "classification": "red",
     "lat": 26.59,
-    "lng": 49.57,
-    "latPos": 7.0,
-    "lngPos": 4.0
+    "lng": 49.57
   },
   {
     "rigId": "RIG008",
     "location": "WASI",
     "classification": "red",
     "lat": 26.92,
-    "lng": 49.53,
-    "latPos": 1.0,
-    "lngPos": 2.0
+    "lng": 49.53
   },
   {
     "rigId": "RIG009",
     "location": "WASI",
     "classification": "red",
     "lat": 27.28,
-    "lng": 49.16,
-    "latPos": 1.0,
-    "lngPos": 2.0
+    "lng": 49.16
   },
   {
     "rigId": "RIG010",
     "location": "WASI",
     "classification": "red",
     "lat": 27.467,
-    "lng": 48.52,
-    "latPos": 1.0,
-    "lngPos": 2.0
+    "lng": 48.52
+  },
+  {
+    "rigId": "RIG011",
+    "location": "WASI",
+    "classification": "green",
+    "lat": 24.75,
+    "lng": 50.35
+  },
+  {
+    "rigId": "RIG012",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 25.45,
+    "lng": 49.75
+  },
+  {
+    "rigId": "RIG013",
+    "location": "WASI",
+    "classification": "green",
+    "lat": 26.35,
+    "lng": 48.95
+  },
+  {
+    "rigId": "RIG014",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 27.05,
+    "lng": 49.85
+  },
+  {
+    "rigId": "RIG015",
+    "location": "WASI",
+    "classification": "red",
+    "lat": 24.05,
+    "lng": 49.85
   }
 ]
