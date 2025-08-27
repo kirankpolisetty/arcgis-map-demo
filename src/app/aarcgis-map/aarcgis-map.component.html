@@ -1,10 +1,18 @@
 <div #mapViewNode style="height: 90vh; width: 100%;"></div>
-<button (click)="saveMapImage()" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
-  Save Map as Image 📷
+
+<button (click)="saveMapImage()" 
+        style="position: fixed; top: 10px; right: 10px; z-index: 1000; padding: 6px 10px; font-size: 13px;">
+  Save Map 📷
 </button>
-<!-- Legend Box -->
-<div class="legend-box">
-  <h4>Legend</h4>
-  <p><span class="legend-color-green"></span>Water Well Active</p>
-  <p><span class="legend-color-red"></span>  Inactive</p>
+
+<!-- Outer Legend Box -->
+<div class="legend-container">
+  <h4>Well Ownership</h4>
+  <div class="custom-legend">
+    <div class="legend-tile green-tile">B1-B33</div>
+    <div class="legend-tile red-tile">B1-58</div>
+    <div class="legend-tile blue-tile">B2-54</div>
+    <div class="legend-tile orange-tile">B2-64</div>
+    <div class="legend-tile aquifer-tile">Target Aquifer</div>
+  </div>
 </div>

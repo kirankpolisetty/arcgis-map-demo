@@ -119,3 +119,53 @@ svg {
     border: 1px solid #555;
     vertical-align: middle;
 }
+
+  .legend-container {
+    position: fixed;
+    top: 60px; /* below Save button */
+    right: 20px;
+    background: white;
+    border: 2px solid #444;
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    width: max-content;
+  }
+
+  .legend-container h4 {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
+    text-align: center;
+  }
+
+  .custom-legend {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: 6px;
+  }
+
+  .legend-tile {
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    min-width: 60px;
+  }
+
+  /* Color-coded tiles */
+  .green-tile { background-color: #28a745; }
+  .red-tile { background-color: #dc3545; }
+  .blue-tile { background-color: #007bff; }
+  .orange-tile { background-color: #fd7e14; }
+
+  /* Aquifer tile spans full width */
+  .aquifer-tile {
+    background-color: #17a2b8;
+    grid-column: 1 / -1; /* span all columns */
+  }
