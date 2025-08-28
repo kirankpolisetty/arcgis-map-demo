@@ -12,9 +12,11 @@ import {
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { placeRigSquare } from '../utils/rig-placement.utils';
+import { getBubbleRadius, placeRigSquare } from '../utils/rig-placement.utils';
 import { Rig, RigGraphics, RigResult } from '../water-well';
-
+import { MAP_BOUNDS, NO_OF_ATTEMPTS } from '../utils/map.config';
+import Polyline from '@arcgis/core/geometry/Polyline';
+import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
 // === GLOBAL STATE ===
 const existing: RigGraphics[] = [];
 
@@ -22,7 +24,7 @@ const existing: RigGraphics[] = [];
 const MAP_CONFIG = {
   center: [48.1383, 24.2886] as [number, number],
   minZoom: 6,
-  maxZoom: 7
+  maxZoom: 7,
 };
 const STYLE = {
   markerIcon: 'assets/oil-rig.svg',
@@ -33,8 +35,6 @@ const STYLE = {
   bubbleColor: [0, 255, 0, 0.9],
   textFont: { size: 10, weight: 'bold', family: 'Arial' },
 };
-const NO_OF_ATTEMPTS = 2;
-const BUBBLE_RADIUS = 2;
 
 @Component({
   selector: 'app-arcgis-map',
@@ -88,13 +88,15 @@ export class ArcgisMapComponent implements OnInit {
       constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom },
     });
 
+    const BUBBLE_RADIUS = getBubbleRadius(this.mapView);
+
     const rigLayer = new GraphicsLayer();
     map.add(rigLayer);
 
     // Place rigs
     this.mapView.when(() => {
       for (const rig of this.rigs) {
-        const result = placeRigSquare(rig, existing, 2, 3);
+        const result = placeRigSquare(rig, existing, this.mapView, 2, 3);
         if (result) {
           this.addRigGraphic(rigLayer, rig, result);
         } else {
@@ -102,9 +104,6 @@ export class ArcgisMapComponent implements OnInit {
           missToPlotArray.push(rig);
         }
       }
-
-      console.log('missToPlotArray size is ..... ' + missToPlotArray.length);
-
       // Retry with higher step count
       if (missToPlotArray.length > 0) {
         const retrySteps = NO_OF_ATTEMPTS * 2;
@@ -114,6 +113,7 @@ export class ArcgisMapComponent implements OnInit {
           const result = placeRigSquare(
             rig,
             existing,
+            this.mapView,
             BUBBLE_RADIUS * 2,
             retrySteps
           );
@@ -150,10 +150,64 @@ export class ArcgisMapComponent implements OnInit {
     console.log('✅ Map initialized with rigs');
   }
 
+  private clampToBounds(
+    lat: number,
+    lng: number
+  ): { lat: number; lng: number } {
+    const clampedLat = Math.min(
+      Math.max(lat, MAP_BOUNDS.minLat),
+      MAP_BOUNDS.maxLat
+    );
+    const clampedLng = Math.min(
+      Math.max(lng, MAP_BOUNDS.minLng),
+      MAP_BOUNDS.maxLng
+    );
+    // console.log("<--[CLAMPEDLAT]--->", clampedLat+"ORIGINAL LAT IS:--->"+lat);
+    return { lat: clampedLat, lng: clampedLng };
+  }
+
   private addRigGraphic(layer: GraphicsLayer, rig: Rig, result: RigResult) {
     const { stickGraphic, bubbleGraphic } = result;
-    layer.addMany([stickGraphic, bubbleGraphic]);
 
+    // original rig base
+    const baseLat = rig.lat;
+    const baseLng = rig.lng;
+
+    // bubble coordinates (clamped)
+    let { latitude, longitude } = bubbleGraphic.geometry as __esri.Point;
+    const clamped = this.clampToBounds(latitude!, longitude!);
+    latitude = clamped.lat;
+    longitude = clamped.lng;
+
+    // update bubble
+    const clampedBubble = bubbleGraphic.clone();
+    clampedBubble.geometry = {
+      type: 'point',
+      latitude,
+      longitude,
+    } as __esri.Point;
+
+    // create a new stick (line) from base → clamped bubble
+    const stickLine = new Graphic({
+      geometry: new Polyline({
+        paths: [
+          [
+            [baseLng, baseLat],
+            [longitude, latitude],
+          ],
+        ],
+        spatialReference: { wkid: 4326 },
+      }),
+      symbol: new SimpleLineSymbol({
+        color: STYLE.stickColor,
+        width: 2,
+      }),
+    });
+
+    // add stick + clamped bubble
+    layer.addMany([stickLine, clampedBubble]);
+
+    // add text at bubble
     const textSymbol = new TextSymbol({
       text: `${rig.rigId}\n${rig.location}`,
       color: STYLE.stickColor,
@@ -161,10 +215,10 @@ export class ArcgisMapComponent implements OnInit {
       haloSize: 2,
       font: { size: 12, weight: 'bold', family: 'Arial' },
     });
-
     layer.add(
-      new Graphic({ geometry: bubbleGraphic.geometry!, symbol: textSymbol })
+      new Graphic({ geometry: clampedBubble.geometry!, symbol: textSymbol })
     );
+    
   }
 
   async saveMapImage() {
@@ -183,4 +237,3 @@ export class ArcgisMapComponent implements OnInit {
     }
   }
 }
-

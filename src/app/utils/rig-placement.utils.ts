@@ -1,11 +1,10 @@
-import Point from "@arcgis/core/geometry/Point";
-import { Rig, RigGraphics, RigResult } from "../water-well";
-import Polyline from "@arcgis/core/geometry/Polyline";
-import Graphic from "@arcgis/core/Graphic";
-import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import { LAT_RANGE, LNG_RANGE, MAP_STYLE } from "./map.config";
-
+import Graphic from '@arcgis/core/Graphic';
+import Point from '@arcgis/core/geometry/Point';
+import Polyline from '@arcgis/core/geometry/Polyline';
+import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
+import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
+import { Rig, RigGraphics, RigResult } from '../water-well';
+import { MAP_STYLE } from './map.config';
 
 // === HELPERS ===
 export function isValidPlacement(
@@ -34,36 +33,35 @@ export function generateSquarePositions(
 ): Point[] {
   const positions: Point[] = [];
   for (let r = 1; r <= steps; r++) {
-    for (let dx = -r; dx <= r; dx++) {
+    for (let dx = 1; dx <= r; dx++) {   // ✅ start from dx=1 so always offset east
       for (let dy = -r; dy <= r; dy++) {
-        if (dx || dy) {
-          positions.push(
-            new Point({
-              latitude: lat + dx * radius,
-              longitude: lng + dy * radius,
-              spatialReference: { wkid: 4326 },
-            })
-          );
-        }
+        positions.push(
+          new Point({
+            latitude: lat + dy * radius,
+            longitude: lng + dx * radius,
+            spatialReference: { wkid: 4326 },
+          })
+        );
       }
     }
   }
   return positions;
 }
 
-export function isWithinBounds(point: Point): boolean {
-  return (
-    point.latitude! >= LAT_RANGE.min &&
-    point.latitude! <= LAT_RANGE.max &&
-    point.longitude! >= LNG_RANGE.min &&
-    point.longitude! <= LNG_RANGE.max
-  );
+export function getBubbleRadius(mapView: __esri.MapView): number {
+  const zoom = mapView.zoom;
+  return zoom >= 10 ? 0.01 : zoom >= 8 ? 0.05 : 0.1; 
 }
 
 
+export function isWithinBounds(point: Point, mapView?: __esri.MapView): boolean {
+  if (!mapView) return true;
+  return mapView.extent.contains(point);
+}
+
 export function placeRigSquare(
   rig: Rig,
-  existing: RigGraphics[],
+  existing: RigGraphics[],mapView?: __esri.MapView,
   bubbleRadius = 0.0003,
   steps = 4
 ): RigResult | null {
@@ -73,9 +71,9 @@ export function placeRigSquare(
     bubbleRadius,
     steps
   )) {
-   // if (!isWithinBounds(bubblePoint)) continue;
+    if (!isWithinBounds(bubblePoint, mapView)) continue;
 
-    if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
+    if (isValidPlacement(bubblePoint,  existing, bubbleRadius)) {
       const stickLine = new Polyline({
         paths: [
           [
@@ -86,7 +84,14 @@ export function placeRigSquare(
         spatialReference: { wkid: 4326 },
       });
 
-      console.log("*[Longitude]*" +bubblePoint.longitude + "*[Latitide]*"+bubblePoint.latitude);
+      console.log(
+        'rig.rigId' +
+          rig.rigId +
+          '*[Longitude]*' +
+          bubblePoint.longitude +
+          '*[Latitide]*' +
+          bubblePoint.latitude
+      );
       existing.push({
         rigId: rig.rigId,
         polyline: stickLine,
@@ -113,4 +118,3 @@ export function placeRigSquare(
   }
   return null;
 }
-

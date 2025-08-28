@@ -14,8 +14,15 @@ export const MAP_CONFIG = {
   zoom: 6,
 };
 export const NO_OF_ATTEMPTS = 2;
-export const BUBBLE_RADIUS = 2;
+export const BUBBLE_RADIUS = 0.05;
 
 // === CONFIG ===
-export const LAT_RANGE = { min: 20, max: 100 }; // example: only allow between 20°N and 30°N
-export const LNG_RANGE = { min: 20, max: 100 }; // optional: restrict longitude as well
+export const LAT_RANGE = { min: 20, max: 60 }; // example: only allow between 20°N and 30°N
+export const LNG_RANGE = { min: 20, max: 60 }; // optional: restrict longitude as well
+
+export const MAP_BOUNDS = {
+  minLat: 20,   // southern edge
+  maxLat: 32,   // northern edge
+  minLng: 34,   // western edge
+  maxLng: 56    // eastern edge
+};
