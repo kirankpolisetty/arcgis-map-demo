@@ -10,16 +10,18 @@ import {
 } from '@angular/core';
 // ArcGIS core
 import Graphic from '@arcgis/core/Graphic';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { createLegendLayer, findNonOverlappingPosition } from '../utils/rig-placement.utils';
-import { Rig } from '../water-well';
-import { MAP_BOUNDS } from '../utils/map.config';
 import Polyline from '@arcgis/core/geometry/Polyline';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
 import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
-import Point from '@arcgis/core/geometry/Point';
-import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { MAP_BOUNDS, tilesMap } from '../utils/map.config';
+import {
+  createLegendLayer,
+  findNonOverlappingPosition,
+} from '../utils/rig-placement.utils';
+import { Rig } from '../water-well';
+import { catchError, of } from 'rxjs';
 
 const MAP_CONFIG = {
   center: [48.1383, 24.2886] as [number, number],
@@ -48,6 +50,7 @@ export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
   private mapView?: __esri.MapView;
   rigs: Rig[] = [];
+  errorMessage: string | null = '';
   private placedBubbles: { x: number; y: number; radius: number }[] = [];
 
   constructor(
@@ -58,7 +61,15 @@ export class ArcgisMapComponent implements OnInit {
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.http.get<Rig[]>('assets/rig_data_sample2.json').subscribe((data) => {
+    this.http.get<Rig[]>('assets/rigs_sample4.json')
+    .pipe(
+      catchError((err) => {
+        console.error("***Error loading rigs:***", err);
+        this.errorMessage = 'Failed to load rig data. Please check the file path'
+        return of([]);
+      })
+    )
+    .subscribe((data) => {
       this.rigs = data || [];
       this.initMap();
     });
@@ -87,7 +98,6 @@ export class ArcgisMapComponent implements OnInit {
 
     await this.mapView.when(() => {
       this.mapView?.map?.add(createLegendLayer(this.mapView));
-      //this.mapView?.ui.add("legend-container", "top-right");
     });
 
     // 1) draw rig icons (oil rig SVG)
@@ -201,12 +211,13 @@ export class ArcgisMapComponent implements OnInit {
         geometry: finalMapPoint,
         symbol: new SimpleMarkerSymbol({
           style: 'square',
-          color: STYLE.bubbleColor,
+          color: tilesMap.get(rig.label)!.color,
           size: STYLE.squareSize,
           outline: { color: [0, 0, 0], width: 1 },
         }),
       });
 
+      console.log("tilesMap.get(rig.label)!.color--->",rig.label, tilesMap.get(rig.label)!.color);
       const stick = new Graphic({
         geometry: new Polyline({
           paths: [
@@ -217,7 +228,12 @@ export class ArcgisMapComponent implements OnInit {
           ],
           spatialReference: { wkid: 4326 },
         }),
-        symbol: new SimpleLineSymbol({ color: STYLE.stickColor, width: 2 }),
+        
+        symbol: new SimpleLineSymbol({
+          //color:  [255, 0, 0, 0.9], // always black
+          color: tilesMap.get(rig.label)!.color,
+          width: 2,
+        }),
       });
 
       const label = new Graphic({
@@ -237,7 +253,6 @@ export class ArcgisMapComponent implements OnInit {
       layer.addMany([stick, bubble, label]);
     }
   }
-  
 
   async saveMapImage() {
     if (!this.mapView) return alert('Map is not ready yet!');
@@ -248,7 +263,7 @@ export class ArcgisMapComponent implements OnInit {
       });
       const a = document.createElement('a');
       a.href = screenshot.dataUrl;
-      a.download = 'active-rigs-map.png';
+      a.download = 'water-wells-map.png';
       a.click();
     } catch (error) {
       console.error('Error taking screenshot:', error);

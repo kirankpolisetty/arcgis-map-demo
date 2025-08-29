@@ -19,6 +19,7 @@ export interface Rig {
   lng: number;
   location: string;
   classification: string;
+  label: string;
 }
 export interface RigGraphics {
   rigId: string;

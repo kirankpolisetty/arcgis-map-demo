@@ -26,3 +26,15 @@ export const MAP_BOUNDS = {
   minLng: 34,   // western edge
   maxLng: 56    // eastern edge
 };
+
+export const tilesArray = [
+  { color: [0, 100, 0, 0.9], label: 'B1-B2' },
+  { color: [255, 0, 0, 0.9], label: 'B1-B123' },
+  { color: [0, 0, 255, 0.9], label: 'B123-134' },
+  { color: [255, 165, 0, 0.9], label: 'B123-145' },
+];
+
+//convert to a Map for fast retrieval
+export const tilesMap = new Map<string, {color: number[]; label: string}>(
+  tilesArray.map((tile) => [tile.label, tile])
+);

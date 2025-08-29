@@ -1,13 +1,10 @@
 import Graphic from '@arcgis/core/Graphic';
 import Point from '@arcgis/core/geometry/Point';
-import Polyline from '@arcgis/core/geometry/Polyline';
-import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
-import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
-import { Rig, RigGraphics, RigResult } from '../water-well';
-import { MAP_STYLE, MAP_BOUNDS } from './map.config';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { RigGraphics } from '../water-well';
+import { MAP_BOUNDS, tilesArray, tilesMap } from './map.config';
 
 // === HELPERS ===
 export function isValidPlacement(
@@ -71,100 +68,66 @@ export function isWithinBounds(
   );
 }
 
-export function placeRigSquare(
-  rig: Rig,
-  existing: RigGraphics[], // read-only here: contains already-finalized bubbles
-  mapView?: __esri.MapView,
-  bubbleRadius = 0.0003,
-  steps = 4
-): RigResult | null {
-  for (const bubblePoint of generateSquarePositions(
-    rig.lat,
-    rig.lng,
-    bubbleRadius,
-    steps
-  )) {
-    // clamp candidate to MAP_BOUNDS (final geographic candidate)
-    bubblePoint.latitude = Math.min(
-      Math.max(bubblePoint.latitude!, MAP_BOUNDS.minLat),
-      MAP_BOUNDS.maxLat
-    );
-    bubblePoint.longitude = Math.min(
-      Math.max(bubblePoint.longitude!, MAP_BOUNDS.minLng),
-      MAP_BOUNDS.maxLng
-    );
-
-    // quick bounds check
-    if (!isWithinBounds(bubblePoint)) continue;
-
-    // check overlap against already-finalized existing bubbles
-    if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
-      const stickLine = new Polyline({
-        paths: [
-          [
-            [rig.lng, rig.lat],
-            [bubblePoint.longitude!, bubblePoint.latitude!],
-          ],
-        ],
-        spatialReference: { wkid: 4326 },
-      });
-
-      // RETURN the graphics (do NOT mutate existing here)
-      return {
-        stickGraphic: new Graphic({
-          geometry: stickLine,
-          symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
-        }),
-        bubbleGraphic: new Graphic({
-          geometry: bubblePoint,
-          symbol: new SimpleMarkerSymbol({
-            style: 'square',
-            color: MAP_STYLE.bubbleColor,
-            size: MAP_STYLE.squareSize,
-            outline: { color: [0, 0, 0], width: 1 },
-          }),
-        }),
-      };
-    }
-  }
-  return null;
-}
-
-// ✅ Ensures every bubble is placed, avoids overlap with spiral search
-// export function findNonOverlappingPosition(
-//   x: number,
-//   y: number,
-//   placedBubbles: { x: number; y: number; radius: number }[],
-//   radius: number
-// ): { x: number; y: number } {
-//   const maxAttempts = 50;
-//   const step = radius * 2.2;
-//   let angle = 0;
-//   let attempt = 0;
-
-//   let newX = x,
-//     newY = y;
-
-//   while (attempt < maxAttempts) {
-//     const overlapping = placedBubbles.some(
-//       (b) => Math.hypot(b.x - newX, b.y - newY) < b.radius + radius + 2
+// export function placeRigSquare(
+//   rig: Rig,
+//   existing: RigGraphics[], // read-only here: contains already-finalized bubbles
+//   mapView?: __esri.MapView,
+//   bubbleRadius = 0.0003,
+//   steps = 4
+// ): RigResult | null {
+//   for (const bubblePoint of generateSquarePositions(
+//     rig.lat,
+//     rig.lng,
+//     bubbleRadius,
+//     steps
+//   )) {
+//     // clamp candidate to MAP_BOUNDS (final geographic candidate)
+//     bubblePoint.latitude = Math.min(
+//       Math.max(bubblePoint.latitude!, MAP_BOUNDS.minLat),
+//       MAP_BOUNDS.maxLat
+//     );
+//     bubblePoint.longitude = Math.min(
+//       Math.max(bubblePoint.longitude!, MAP_BOUNDS.minLng),
+//       MAP_BOUNDS.maxLng
 //     );
 
-//     if (!overlapping) return { x: newX, y: newY };
+//     // quick bounds check
+//     if (!isWithinBounds(bubblePoint)) continue;
 
-//     // move in spiral
-//     angle += Math.PI / 6;
-//     const distance = step * (1 + attempt / 10);
-//     newX = x + Math.cos(angle) * distance;
-//     newY = y + Math.sin(angle) * distance;
-//     attempt++;
+//     // check overlap against already-finalized existing bubbles
+//     if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
+
+//       const stickLine = new Polyline({
+//         paths: [
+//           [
+//             [rig.lng, rig.lat],
+//             [bubblePoint.longitude!, bubblePoint.latitude!],
+//           ],
+//         ],
+//         spatialReference: { wkid: 4326 },
+//       });
+
+//       // RETURN the graphics (do NOT mutate existing here)
+//       return {
+//         stickGraphic: new Graphic({
+//           geometry: stickLine,
+//           symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
+//         }),
+//         bubbleGraphic: new Graphic({
+//           geometry: bubblePoint,
+//           symbol: new SimpleMarkerSymbol({
+//             style: 'square',
+//             color: [0, 255, 0, 0.9],
+//             size: MAP_STYLE.squareSize,
+//             outline: { color: [0, 0, 0], width: 1 },
+//           }),
+//         }),
+//       };
+//     }
 //   }
-
-//   console.warn('⚠️ Forced placement (fallback).');
-//   return { x, y };
+//   return null;
 // }
 
-// src/app/utils/bubble-placement.utils.ts
 export function findNonOverlappingPosition(
   x: number,
   y: number,
@@ -252,8 +215,8 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
     geometry: {
       type: 'extent',
       xmin: baseLng,
-      ymin: baseLat - 3.5, // height of rectangle
-      xmax: baseLng + 3.5, // width of rectangle
+      ymin: baseLat - 3.1, // height of rectangle
+      xmax: baseLng + 3.3, // width of rectangle
       ymax: baseLat,
       spatialReference: { wkid: 4326 },
     },
@@ -280,14 +243,8 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
   legendLayer.add(title);
 
   // tile definitions
-  const tiles = [
-    { color: [0, 255, 0, 0.9], label: 'B1-B2' },
-    { color: [255, 0, 0, 0.9], label: 'B1-B123' },
-    { color: [0, 0, 255, 0.9], label: 'B123-134' },
-    { color: [255, 165, 0, 0.9], label: 'B123-145' },
-  ];
 
-  tiles.forEach((tile, i) => {
+  tilesArray.forEach((tile,  i: number) => {
     const row = Math.floor(i / 2);
     const col = i % 2;
 
@@ -309,7 +266,7 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
       },
       symbol: new SimpleFillSymbol({
         color: tile.color,
-        outline: { color: [0, 0, 0], width: 1 },
+        outline: tilesMap.get(tile.label) ? { color: [0, 0, 0], width: 1 } : null,
       }),
     });
     legendLayer.add(tileRect);
