@@ -10,7 +10,7 @@ export const MAP_STYLE = {
 
 // === CONFIG ===
 export const MAP_CONFIG = {
-  center: [48.1383, 24.2886] as [number, number],
+  center: [48.1383, 24.7866] as [number, number],
   zoom: 6,
 };
 export const NO_OF_ATTEMPTS = 2;
@@ -28,10 +28,10 @@ export const MAP_BOUNDS = {
 };
 
 export const tilesArray = [
-  { color: [0, 100, 0, 0.9], label: 'B1-B2' },
-  { color: [255, 0, 0, 0.9], label: 'B1-B123' },
-  { color: [0, 0, 255, 0.9], label: 'B123-134' },
-  { color: [255, 165, 0, 0.9], label: 'B123-145' },
+  { color: [132, 224, 63, 0.9], label: 'BI-33' },
+  { color: [199,153,240, 0.9], label: 'BI-58' },
+  { color: [245, 100, 109, 0.9], label: 'BI-34' },
+  { color: [108, 183, 240, 0.9], label: 'BI-60' },
 ];
 
 //convert to a Map for fast retrieval

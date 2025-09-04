@@ -1,67 +1,75 @@
 [
   {
-    "rigId": "RIG001",
-    "location": "Ghawar",
+    "rigId": "ZHWH-801",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 25.0833,
-    "lng": 49.8000,
-    "label": "B1-B2"
+    "lat": 29.9539,
+    "lng": 40.1970,
+    "label": "BI-33"
   },
   {
-    "rigId": "RIG002",
-    "location": "Safaniya",
+    "rigId": "ABQQ-987",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 27.4000,
-    "lng": 50.1667,
-    "label": "B1-B123"
+    "lat": 26.7500,
+    "lng": 49.9046,
+    "label": "BI-58"
   },
   {
-    "rigId": "RIG003",
-    "location": "Khursaniyah",
+    "rigId": "SDGM-3524",
+    "location": "WASI",
+    "classification": "eastern",
+    "lat": 26.6494,
+    "lng": 49.950,
+    "label": "BI-60"
+  },
+  {
+    "rigId": "UTMN-3573",
+    "location": "WASI",
     "classification": "eastern",
     "lat": 20.2500,
     "lng": 49.6333,
-    "label": "B123-134"
+    "label": "BI-34"
   },
  
   {
-    "rigId": "RIG006",
-    "location": "Shaybah",
+    "rigId": "THRY-844",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 19.9000,
-    "lng": 52.7000,
-    "label": "B1-B2"
+    "lat": 25.9168,
+    "lng": 49.6707,
+    "label": "BI-60"
   },
   {
-    "rigId": "RIG007",
-    "location": "Dammam",
+    "rigId": "JWYT-801",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 26.4333,
-    "lng": 50.1000,
-    "label": "B1-B2"
+    "lat": 21.9868,
+    "lng": 45.9658,
+    "label": "BI-33"
   },
   {
-    "rigId": "RIG008",
-    "location": "Hofuf",
+    "rigId": "HRDH-3571",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 25.3547,
-    "lng": 49.5867,
-    "label": "B1-B2"
+    "lat": 23.1578,
+    "lng": 50.1471,
+    "label": "BI-33"
   },
   {
-    "rigId": "RIG009",
-    "location": "Qatif",
+    "rigId": "HZEM-872",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 26.5833,
-    "lng": 50.0333,
-    "label": "B123-145"
+    "lat": 26.0163,
+    "lng": 49.1471,
+    "label": "BI-34"
   },
   {
-    "rigId": "RIG010",
-    "location": "Ras Tanura",
+    "rigId": "THRY-840",
+    "location": "WASI",
     "classification": "eastern",
-    "lat": 26.7167,
-    "lng": 50.0833,
-    "label": "B1-B2"
+    "lat": 26.2794,
+    "lng": 50.2083,
+    "label": "BI-34"
   }
 ]
