@@ -71,5 +71,21 @@
     "lat": 26.2794,
     "lng": 50.2083,
     "label": "BI-34"
+  },
+  {
+    "rigId": "RIYH-840",
+    "location": "WASI",
+    "classification": "eastern",
+    "lat": 24.7136,
+    "lng": 46.6753,
+    "label": "BI-60"
+  },
+  {
+    "rigId": "CORNIE-843",
+    "location": "WASI",
+    "classification": "eastern",
+    "lat": 24.5855,
+    "lng": 46.7730,
+    "label": "BI-60"
   }
 ]
