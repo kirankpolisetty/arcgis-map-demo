@@ -1,3 +1,9 @@
+import Graphic from "@arcgis/core/Graphic";
+import Point from "@arcgis/core/geometry/Point";
+import Polygon from "@arcgis/core/geometry/Polygon";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import TextSymbol from "@arcgis/core/symbols/TextSymbol";
+
 export const MAP_STYLE = {
   markerIcon: 'assets/oil-rig.svg',
   markerSize: '28px',
@@ -10,8 +16,9 @@ export const MAP_STYLE = {
 
 // === CONFIG ===
 export const MAP_CONFIG = {
-  center: [48.1383, 24.7866] as [number, number],
-  zoom: 6,
+  center: [49.1383, 24.7866] as [number, number],
+  minZoom: 6,
+  maxZoom: 7
 };
 export const NO_OF_ATTEMPTS = 2;
 export const BUBBLE_RADIUS = 0.05;
@@ -38,3 +45,91 @@ export const tilesArray = [
 export const tilesMap = new Map<string, {color: number[]; label: string}>(
   tilesArray.map((tile) => [tile.label, tile])
 );
+
+export { Point as ArcGISPoint};
+
+export const lineSymbol = (color: number[])=> 
+  new SimpleLineSymbol({color, width:2});
+
+
+export const wwellIdTextSymbol = (font: any)=> 
+new TextSymbol({
+  color: [0,0,0],
+  font,
+  horizontalAlignment: "center",
+  verticalAlignment: "top",
+  xoffset: 0,
+  yoffset: 8,
+});
+
+
+
+
+
+export interface WWellResult {
+  stickGraphic: Graphic;
+  bubbleGraphic: Graphic;
+}
+
+export const locationTextSymbol = (font: any) => 
+new TextSymbol({
+  color: [255,255,20],
+  font,
+  horizontalAlignment: "center",
+  verticalAlignment: "bottom",
+  xoffset: 0,
+  yoffset: -9,
+});
+
+
+export const STYLE = {
+  markerIcon: 'assets/oil-rig.svg',
+  markerSize: 28, // number, not "28px"
+  bubbleSize: 20,
+  squareSize: 40,
+  stickColor: [10, 40, 0],
+  bubbleColor: [0, 255, 0, 0.9],
+  textFont: { size: 10, weight: 'bold', family: 'Arial' },
+};
+
+
+export const topPolygonTemplate = new Polygon({
+  rings: [
+    [
+      [-0.9, 0.3],
+      [0.9, 0.3],
+      [0.9, 0],
+      [-0.9, 0],
+      [-0.9, 0.3],
+    ],
+  ],
+  spatialReference: {wkid: 4326},
+})
+
+export const bottomPolygonTemplate = new Polygon({
+  rings: [
+    [
+      [-0.5, 0],
+      [0.5, 0],
+      [0.5, -0.3],
+      [-0.5, -0.3],
+      [-0.5, 0],
+    ],
+  ],
+  spatialReference: {wkid: 4326},
+})
+
+
+export interface WWellResult {
+  stickGraphic: Graphic,
+  bubbleGraphic: Graphic
+}
+
+export interface BubblePOint {
+  latitude: number;
+  longitude: number;
+}
+
+
+
+

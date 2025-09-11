@@ -1,0 +1,65 @@
+schemaVersion: 2.2.0
+metadata:
+  name: nodejs-angular
+  displayName: Angular
+  description: 'Angular is a development platform, built on TypeScript...'
+  globalMemoryLimit: "4"
+  icon: https://raw.githubusercontent.com/devfile-samples/devfile-stack-icons/main/angular.svg
+  language: TypeScript
+  projectType: Angular
+  provider: Red Hat
+  tags:
+  - Node.js
+  - Angular
+  version: 2.2.1
+
+components:
+- name: runtime
+  container:
+    command:
+    - tail
+    - -f
+    - /dev/null
+    endpoints:
+    - name: https-angular
+      protocol: https
+      targetPort: 4200
+    image: registry.access.redhat.com/ubi8/nodejs-18:1-137.1742991061
+    memoryLimit: 1024Mi
+
+commands:
+- id: install
+  exec:
+    commandLine: npm install
+    component: runtime
+    workingDir: ${PROJECT_SOURCE}
+    group:
+      kind: build
+      isDefault: true
+
+- id: run
+  exec:
+    commandLine: npm run start
+    component: runtime
+    workingDir: ${PROJECT_SOURCE}
+    group:
+      kind: run
+      isDefault: true
+    hotReloadCapable: true
+
+- id: deploy
+  exec:
+    commandLine: npm run build && npm start
+    component: runtime
+    workingDir: ${PROJECT_SOURCE}
+    group:
+      kind: deploy
+      isDefault: true
+
+starterProjects:
+- name: nodejs-angular-starter
+  git:
+    remotes:
+      origin: https://github.com/devfile-samples/devfile-stack-nodejs-angular.git
+    checkoutFrom:
+      revision: main

@@ -13,33 +13,28 @@ import Graphic from '@arcgis/core/Graphic';
 import Polyline from '@arcgis/core/geometry/Polyline';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
-import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { MAP_BOUNDS, tilesMap } from '../utils/map.config';
-import Polygon from '@arcgis/core/geometry/Polygon';
+import { catchError, of } from 'rxjs';
+import {
+  MAP_BOUNDS,
+  lineSymbol,
+  tilesMap,
+  topPolygonTemplate,
+  wwellIdTextSymbol,
+  locationTextSymbol,
+  bottomPolygonTemplate,
+  STYLE,
+  MAP_CONFIG
+} from '../utils/map.config';
 import {
   createLegendLayer,
   findNonOverlappingPosition,
+  rigUtils,
+  translatePolygon,
 } from '../utils/rig-placement.utils';
 import { Rig } from '../water-well';
-import { catchError, of } from 'rxjs';
+import Point from '@arcgis/core/geometry/Point';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
-
-const MAP_CONFIG = {
-  center: [48.1383, 24.2886] as [number, number],
-  minZoom: 6,
-  maxZoom: 7,
-};
-
-const STYLE = {
-  markerIcon: 'assets/oil-rig.svg',
-  markerSize: 28, // number, not "28px"
-  bubbleSize: 20,
-  squareSize: 40,
-  stickColor: [10, 40, 0],
-  bubbleColor: [0, 255, 0, 0.9],
-  textFont: { size: 10, weight: 'bold', family: 'Arial' },
-};
 
 @Component({
   selector: 'app-arcgis-map',
@@ -50,7 +45,7 @@ const STYLE = {
 })
 export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
-  private mapView?: __esri.MapView;
+  mapView?: __esri.MapView;
   rigs: Rig[] = [];
   errorMessage: string | null = '';
   private placedBubbles: { x: number; y: number; radius: number }[] = [];
@@ -64,7 +59,7 @@ export class ArcgisMapComponent implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
 
     this.http
-      .get<Rig[]>('assets/rigs_sample4.json')
+      .get<Rig[]>('assets/rigs.json')
       .pipe(
         catchError((err) => {
           console.error('***Error loading rigs:***', err);
@@ -147,150 +142,30 @@ export class ArcgisMapComponent implements OnInit {
     }
   }
 
-  // private async layoutBubbles(layer: GraphicsLayer) {
-  //   if (!this.mapView) return;
+  //
 
-  //   layer.removeAll();
-  //   this.placedBubbles = [];
-
-  //   const view = this.mapView;
-  //   const viewW = view.width;
-  //   const viewH = view.height;
-
-  //   const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
-
-  //   const { default: Point } = await import('@arcgis/core/geometry/Point');
-
-  //   for (const rig of this.rigs) {
-  //     const anchorPt = new Point({
-  //       longitude: rig.lng,
-  //       latitude: rig.lat,
-  //       spatialReference: { wkid: 4326 },
-  //     });
-
-  //     let sp = view.toScreen(anchorPt);
-  //     if (!sp) continue;
-
-  //     sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
-  //     sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
-
-  //     const iconRadius = STYLE.markerSize / 2;
-
-  //     const obstacles = [
-  //       ...this.placedBubbles,
-  //       { x: sp.x, y: sp.y, radius: iconRadius + 4 },
-  //     ];
-
-  //     const finalScreen = findNonOverlappingPosition(
-  //       sp.x,
-  //       sp.y,
-  //       obstacles,
-  //       bubblePixelRadius
-  //     );
-
-  //     this.placedBubbles.push({
-  //       x: finalScreen.x,
-  //       y: finalScreen.y,
-  //       radius: bubblePixelRadius,
-  //     });
-
-  //     let finalMapPoint = view.toMap(finalScreen as any) as __esri.Point | null;
-  //     if (!finalMapPoint) {
-  //       finalMapPoint = anchorPt.clone();
-  //     }
-
-  //     // ✅ Offset the bubble so it never sits directly on the oil rig
-  //     const offsetLat = 3; // tweak these numbers if bubbles feel too close/far
-  //     const offsetLng = 4;
-  //     finalMapPoint.latitude = Math.min(
-  //       Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
-  //       MAP_BOUNDS.maxLat
-  //     );
-  //     finalMapPoint.longitude = Math.min(
-  //       Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
-  //       MAP_BOUNDS.maxLng
-  //     );
-
-  //     const bubble = new Graphic({
-  //       geometry: finalMapPoint,
-  //       symbol: new SimpleMarkerSymbol({
-  //         style: 'square',
-  //         color: tilesMap.get(rig.label)!.color,
-  //         size: STYLE.squareSize,
-  //         outline: { color: [0, 0, 0], width: 1 },
-  //       }),
-  //     });
-
-  //     console.log("tilesMap.get(rig.label)!.color--->",rig.label, tilesMap.get(rig.label)!.color);
-  //     const stick = new Graphic({
-  //       geometry: new Polyline({
-  //         paths: [
-  //           [
-  //             [rig.lng, rig.lat], // rig location
-  //             [finalMapPoint.longitude!, finalMapPoint.latitude!], // bubble location
-  //           ],
-  //         ],
-  //         spatialReference: { wkid: 4326 },
-  //       }),
-
-  //       symbol: new SimpleLineSymbol({
-  //         //color:  [255, 0, 0, 0.9], // always black
-  //         color: tilesMap.get(rig.label)!.color,
-  //         width: 2,
-  //       }),
-  //     });
-
-  //     const label = new Graphic({
-  //       geometry: finalMapPoint,
-  //       symbol: new TextSymbol({
-  //         text: `${rig.rigId}\n──────\n${rig.location}`,
-  //         color: [0, 0, 0], // text color (black)
-  //         haloColor: [255, 255, 255, 255], // optional halo for readability
-  //         haloSize: 2,
-  //         font: STYLE.textFont as any,
-  //         horizontalAlignment: 'center',
-  //         verticalAlignment: 'middle', // this makes text centered inside the bubble
-  //         yoffset: 0, // remove the old offset
-  //       }),
-  //     });
-
-  //     layer.addMany([stick, bubble, label]);
-  //   }
-  // }
-
-  // --- Text inside rectangles
-
-  private async layoutBubbles(layer: GraphicsLayer) {
+  private layoutBubbles(layer: GraphicsLayer) {
     if (!this.mapView) return;
-
     layer.removeAll();
     this.placedBubbles = [];
-
     const view = this.mapView;
     const viewW = view.width;
     const viewH = view.height;
 
     const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
-
-    const { default: Point } = await import('@arcgis/core/geometry/Point');
-    const { default: Polygon } = await import('@arcgis/core/geometry/Polygon');
-
-    for (const rig of this.rigs) {
-      const anchorPt = new Point({
-        longitude: rig.lng,
-        latitude: rig.lat,
-        spatialReference: { wkid: 4326 },
-      });
-
-      let sp = view.toScreen(anchorPt);
+    const iconRadius = STYLE.markerSize / 2;
+    const graphics: Graphic[] = [];
+    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: {wkid: 4326} });
+    for (const wwell of this.rigs) {
+      anchorPt.latitude = wwell.lat;
+      anchorPt.longitude = wwell.lng;
+      const sp = view.toScreen(anchorPt);
       if (!sp) continue;
 
       sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
       sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
 
-      const iconRadius = STYLE.markerSize / 2;
-
-      const obstacles = [
+      const obstaces = [
         ...this.placedBubbles,
         { x: sp.x, y: sp.y, radius: iconRadius + 4 },
       ];
@@ -298,7 +173,7 @@ export class ArcgisMapComponent implements OnInit {
       const finalScreen = findNonOverlappingPosition(
         sp.x,
         sp.y,
-        obstacles,
+        obstaces,
         bubblePixelRadius
       );
 
@@ -309,11 +184,8 @@ export class ArcgisMapComponent implements OnInit {
       });
 
       let finalMapPoint = view.toMap(finalScreen as any) as __esri.Point | null;
-      if (!finalMapPoint) {
-        finalMapPoint = anchorPt.clone();
-      }
+      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
 
-      // ✅ Offset the bubble so it never sits directly on the oil rig
       const offsetLat = 4;
       const offsetLng = 4;
       finalMapPoint.latitude = Math.min(
@@ -325,83 +197,64 @@ export class ArcgisMapComponent implements OnInit {
         MAP_BOUNDS.maxLng
       );
 
-      // --- TOP RECTANGLE (main bubble) ---
-      const bubbleTop = new Graphic({
-        geometry: new Polygon({
-          rings: [
-            [
-              [finalMapPoint.longitude! - 0.9, finalMapPoint.latitude! + 0.3], // top-left
-              [finalMapPoint.longitude! + 0.9, finalMapPoint.latitude! + 0.3], // top-right
-              [finalMapPoint.longitude! + 0.9, finalMapPoint.latitude!], // bottom-right
-              [finalMapPoint.longitude! - 0.9, finalMapPoint.latitude!], // bottom-left
-              [finalMapPoint.longitude! - 0.9, finalMapPoint.latitude! + 0.3], // close ring
-            ],
-          ],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: {
-          type: 'simple-fill',
-          color: tilesMap.get(rig.label)!.color,
-          outline: { color: [0, 0, 0], width: 1 },
-        },
-      });
-
-      const recWidth=1.0;
-      const rectHeight=0;
-      const latOffset=0.3
-
-      // --- SMALLER RECTANGLE BELOW (aquatic blue) ---
-      const bubbleBottom = new Graphic({
-        geometry: new Polygon({
-          rings: [
-            [
-              [finalMapPoint.longitude! - recWidth/2, finalMapPoint.latitude!+rectHeight], // top-left
-              [finalMapPoint.longitude! + recWidth/2, finalMapPoint.latitude!+rectHeight], // top-right
-              [finalMapPoint.longitude! + recWidth/2, finalMapPoint.latitude! - latOffset], // bottom-right
-              [finalMapPoint.longitude! - recWidth/2, finalMapPoint.latitude! - latOffset], // bottom-left
-              [finalMapPoint.longitude! - recWidth/2, finalMapPoint.latitude!+rectHeight], // close ring
-            ],
-          ],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: {
-          type: 'simple-fill',
-          color: [0, 191, 255, 0.9], // aquatic blue
-          outline: { color: [0, 0, 0], width: 1 },
-        },
-      });
-
       const stick = new Graphic({
         geometry: new Polyline({
           paths: [
             [
-              [rig.lng, rig.lat],
+              [wwell.lng, wwell.lat],
               [finalMapPoint.longitude!, finalMapPoint.latitude!],
             ],
           ],
           spatialReference: { wkid: 4326 },
         }),
-        symbol: new SimpleLineSymbol({
-          color: tilesMap.get(rig.label)!.color,
-          width: 2,
+        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
+      });
+
+      const topPoly = translatePolygon(
+        topPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+
+      const bubbleTop = new Graphic({
+        geometry: topPoly,
+        symbol: new SimpleFillSymbol({
+          color: tilesMap.get(wwell.label)!.color,
+          outline: { color: [0, 0, 0], width: 1 },
         }),
       });
 
-      const label = new Graphic({
+      const botomPoly = translatePolygon(
+        bottomPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude
+      );
+
+      const bubbleBUttom = new Graphic({
+        geometry: botomPoly,
+        symbol: new SimpleFillSymbol({
+          color: [0,191,255,0.0],
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      });
+
+      const wwellIdLabel = new Graphic({
         geometry: finalMapPoint,
-        symbol: new TextSymbol({
-          text: `${rig.rigId}\n${rig.location}`,
-          color: [0, 0, 0],
-          font: STYLE.textFont as any,
-          horizontalAlignment: 'center',
-          verticalAlignment: 'middle',
-          yoffset: 0,
-        }),
+        symbol: wwellIdTextSymbol(STYLE.textFont as any),
       });
+      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.rigId}`;
+      
 
-      // Add both rectangles instead of a single square
-      layer.addMany([stick, bubbleTop, bubbleBottom, label]);
+      const locationLabel = new Graphic({
+        geometry: finalMapPoint,
+        symbol: locationTextSymbol(STYLE.textFont as any),
+      });
+      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
+
+
+      graphics.push(stick, bubbleTop, bubbleBUttom, wwellIdLabel,locationLabel);
     }
+    layer.addMany(graphics);
   }
 
   async saveMapImage() {

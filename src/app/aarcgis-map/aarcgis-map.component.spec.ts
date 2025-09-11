@@ -3,10 +3,15 @@ import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { ArcgisMapComponent } from './aarcgis-map.component';
 import { PLATFORM_ID } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { Rig } from '../water-well';
+import { findNonOverlappingPosition, rigUtils } from '../utils/rig-placement.utils';
 
 describe('ArcgisMapComponent (real HTTP)', () => {
   let component: ArcgisMapComponent;
   let fixture: ComponentFixture<ArcgisMapComponent>;
+    // Increase default timeout to 20 seconds
+   jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+
 
   beforeEach(waitForAsync(async () => {
     await TestBed.configureTestingModule({
@@ -18,12 +23,6 @@ describe('ArcgisMapComponent (real HTTP)', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
   }));
-
-  beforeEach(() => {
-    fixture = TestBed.createComponent(ArcgisMapComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
@@ -89,6 +88,53 @@ describe('ArcgisMapComponent (real HTTP)', () => {
 
   });
 
+  describe('ArcgisMapComponent layoutBubbles', () => {
+    let component: ArcgisMapComponent;
+    let mockLayer: any;
+  
+    const fakeRigs: Rig[] = Array.from({ length: 10 }).map((_, i) => ({
+      rigId: `R${i + 1}`,
+      lat: 24.5 + Math.random() * 0.5,
+      lng: 50.0 + Math.random() * 0.5,
+      location: `East${i + 1}`,
+      classification: 'A',
+      label: 'Oil', // must match tilesMap key
+    }));
+  
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [ArcgisMapComponent, HttpClientTestingModule],
+        providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+      }).compileComponents();
+  
+      const fixture = TestBed.createComponent(ArcgisMapComponent);
+      component = fixture.componentInstance;
+      component.rigs = fakeRigs;
+  
+      component.mapView = {
+        width: 800,
+        height: 600,
+        toScreen: jasmine.createSpy('toScreen').and.callFake(pt => ({ x: 100, y: 100 })),
+        toMap: jasmine.createSpy('toMap').and.callFake(scr => ({ latitude: 24.5, longitude: 50, clone: function() { return this; } })),
+        watch: jasmine.createSpy('watch').and.callFake(() => {}),
+        takeScreenshot: jasmine.createSpy('takeScreenshot').and.returnValue(Promise.resolve({ dataUrl: 'fake.png' })),
+      } as any;
+  
+      mockLayer = { removeAll: jasmine.createSpy(), addMany: jasmine.createSpy() };
+  
+      //spyOn(rigUtils, 'findNonOverlappingPosition').and.callFake((x, y, placed, radius) => ({x}));
+      
+    });
+  
+    it('should clear and add graphics', async () => {
+     // await component.layoutBubbles(mockLayer);
+      expect(mockLayer.removeAll).toHaveBeenCalled();
+      expect(mockLayer.addMany).toHaveBeenCalled();
+    });
+
+  
+  
+  });
   
   
 });

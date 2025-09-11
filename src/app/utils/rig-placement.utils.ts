@@ -4,7 +4,14 @@ import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
 import { RigGraphics } from '../water-well';
-import { MAP_BOUNDS, tilesArray, tilesMap } from './map.config';
+import {
+  ArcGISPoint,
+  BubblePOint,
+  MAP_BOUNDS,
+  tilesArray,
+  tilesMap,
+} from './map.config';
+import Polygon from '@arcgis/core/geometry/Polygon';
 
 // === HELPERS ===
 export function isValidPlacement(
@@ -12,18 +19,81 @@ export function isValidPlacement(
   existing: RigGraphics[],
   bubbleRadius: number
 ): boolean {
-  if (!bubblePoint) return false; // invalid point can't be placed
+  if (!bubblePoint) return false;
 
   return !existing.some((e) => {
-    if (!e?.bubble) return false; // skip invalid existing bubbles
+    if (!e?.bubble) return false;
 
     const dx = bubblePoint.longitude! - e.bubble.longitude!;
     const dy = bubblePoint.latitude! - e.bubble.latitude!;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    return distance < bubbleRadius * 2; // simple overlap check
+    return distance < bubbleRadius * 2;
   });
 }
+
+// export function generateSquarePositions(
+//   lat: number,
+//   lng: number,
+//   radius: number,
+//   count: number
+// ): Point[] {
+//   const positions: Point[] = [];
+//   const sr = { wkid: 4326 };
+
+//   let step = 1; // how far we move out
+//   let direction = 0; // 0=right,1=down,2=left,3=up
+//   let dx = 1,
+//     dy = 0; // movement vector
+//   let x = 0,
+//     y = 0; // grid offsets
+
+//   while (positions.length < count) {
+//     positions.push(
+//       new Point({
+//         latitude: lat + y * radius,
+//         longitude: lng + x * radius,
+//         spatialReference: sr,
+//       })
+//     );
+
+//     // move
+//     x += dx;
+//     y += dy;
+
+//     // change direction when needed
+//     if (
+//       (direction === 0 && x === step) ||
+//       (direction === 1 && y === step) ||
+//       (direction === 2 && x === -step) ||
+//       (direction === 3 && y === -step)
+//     ) {
+//       direction = (direction + 1) % 4;
+
+//       if (direction === 0 || direction === 2) step++; // expand spiral size
+
+//       // update movement vector
+//       if (direction === 0) {
+//         dx = 1;
+//         dy = 0;
+//       }
+//       if (direction === 1) {
+//         dx = 0;
+//         dy = 1;
+//       }
+//       if (direction === 2) {
+//         dx = -1;
+//         dy = 0;
+//       }
+//       if (direction === 3) {
+//         dx = 0;
+//         dy = -1;
+//       }
+//     }
+//   }
+
+//   return positions;
+// }
 
 export function generateSquarePositions(
   lat: number,
@@ -31,19 +101,17 @@ export function generateSquarePositions(
   radius: number,
   steps: number
 ): Point[] {
-  const positions: Point[] = [];
-  for (let r = 1; r <= steps; r++) {
-    for (let dx = 1; dx <= r; dx++) {
-      // ✅ start from dx=1 so always offset east first
-      for (let dy = -r; dy <= r; dy++) {
-        positions.push(
-          new Point({
-            latitude: lat + dy * radius,
-            longitude: lng + dx * radius,
-            spatialReference: { wkid: 4326 },
-          })
-        );
-      }
+  const totalPOints = steps * (2 * steps + 1);
+  const positions = new Array<Point>(totalPOints);
+  let i = 0;
+  for (let dx = 1; dx <= steps; dx++) {
+    const lon = lng + dx * radius;
+    for (let dy = -steps; dy <= steps; dy++) {
+      const latOffset = lat + dy * radius;
+      positions[i++] = new Point({
+        latitude: latOffset,
+        longitude: lon,
+      });
     }
   }
   return positions;
@@ -54,112 +122,88 @@ export function getBubbleRadius(mapView: __esri.MapView): number {
   return zoom >= 10 ? 0.01 : zoom >= 8 ? 0.05 : 0.1;
 }
 
-// Use explicit MAP_BOUNDS (avoid spatialRef conversions)
-export function isWithinBounds(
-  point: Point,
-  mapView?: __esri.MapView
-): boolean {
-  if (!point) return false;
-  return (
-    point.latitude! >= MAP_BOUNDS.minLat &&
-    point.latitude! <= MAP_BOUNDS.maxLat &&
-    point.longitude! >= MAP_BOUNDS.minLng &&
-    point.longitude! <= MAP_BOUNDS.maxLng
-  );
-}
 
-// export function placeRigSquare(
-//   rig: Rig,
-//   existing: RigGraphics[], // read-only here: contains already-finalized bubbles
-//   mapView?: __esri.MapView,
-//   bubbleRadius = 0.0003,
-//   steps = 4
-// ): RigResult | null {
-//   for (const bubblePoint of generateSquarePositions(
-//     rig.lat,
-//     rig.lng,
-//     bubbleRadius,
-//     steps
-//   )) {
-//     // clamp candidate to MAP_BOUNDS (final geographic candidate)
-//     bubblePoint.latitude = Math.min(
-//       Math.max(bubblePoint.latitude!, MAP_BOUNDS.minLat),
-//       MAP_BOUNDS.maxLat
+// === Main function ===
+// export function findNonOverlappingPosition(
+//   x: number,
+//   y: number,
+//   placedBubbles: { x: number; y: number; radius: number }[],
+//   radius: number
+// ): { x: number; y: number } {
+//   const maxAttempts = 60;
+//   const baseStep = radius * 1.5;
+//   let angle = 0;
+//   let attempt = 0;
+
+//   let newX = x;
+//   let newY = y;
+
+//   while (attempt < maxAttempts) {
+//     const overlapping = placedBubbles.some(
+//       (b) => Math.hypot(b.x - newX, b.y - newY) < b.radius + radius + 2
 //     );
-//     bubblePoint.longitude = Math.min(
-//       Math.max(bubblePoint.longitude!, MAP_BOUNDS.minLng),
-//       MAP_BOUNDS.maxLng
-//     );
+//     if (!overlapping) return { x: newX, y: newY };
 
-//     // quick bounds check
-//     if (!isWithinBounds(bubblePoint)) continue;
-
-//     // check overlap against already-finalized existing bubbles
-//     if (isValidPlacement(bubblePoint, existing, bubbleRadius)) {
-
-//       const stickLine = new Polyline({
-//         paths: [
-//           [
-//             [rig.lng, rig.lat],
-//             [bubblePoint.longitude!, bubblePoint.latitude!],
-//           ],
-//         ],
-//         spatialReference: { wkid: 4326 },
-//       });
-
-//       // RETURN the graphics (do NOT mutate existing here)
-//       return {
-//         stickGraphic: new Graphic({
-//           geometry: stickLine,
-//           symbol: new SimpleLineSymbol({ color: [0, 0, 0], width: 2 }),
-//         }),
-//         bubbleGraphic: new Graphic({
-//           geometry: bubblePoint,
-//           symbol: new SimpleMarkerSymbol({
-//             style: 'square',
-//             color: [0, 255, 0, 0.9],
-//             size: MAP_STYLE.squareSize,
-//             outline: { color: [0, 0, 0], width: 1 },
-//           }),
-//         }),
-//       };
-//     }
+//     angle += Math.PI / 6;
+//     const distance = baseStep * (1 + attempt / 6);
+//     newX = x + Math.cos(angle) * distance;
+//     newY = y + Math.sin(angle) * distance;
+//     attempt++;
 //   }
-//   return null;
+
+//   return { x, y };
 // }
 
+export function toArcGis(p: BubblePOint): ArcGISPoint {
+  return new ArcGISPoint(p);
+}
 export function findNonOverlappingPosition(
   x: number,
   y: number,
   placedBubbles: { x: number; y: number; radius: number }[],
   radius: number
-): { x: number; y: number } {
-  const maxAttempts = 60;
+): ArcGISPoint {
+  const maxAttempt = 60;
   const baseStep = radius * 1.5;
+  const safety = 2;
+
   let angle = 0;
   let attempt = 0;
-
   let newX = x;
   let newY = y;
 
-  while (attempt < maxAttempts) {
-    const overlapping = placedBubbles.some(
-      (b) => Math.hypot(b.x - newX, b.y - newY) < b.radius + radius + 2
-    );
-    if (!overlapping) return { x: newX, y: newY };
+  const candidate: BubblePOint = { latitude: 0, longitude: 0 };
+  while (attempt < maxAttempt) {
+    candidate.latitude = newY;
+    candidate.longitude = newX;
 
+    //Linear scan of already place dbubbles
+    const collisions = placedBubbles.some((b) => {
+      const existing: BubblePOint & { readius: number } = {
+        latitude: b.y,
+        longitude: b.x,
+        readius: b.radius,
+      };
+      //squaredd-staince test - no math.hypot
+      const dx = existing.longitude - candidate.longitude;
+      const dy = existing.latitude - candidate.latitude;
+      const minDist = existing.readius + radius + safety;
+      return dx * dx + dy * dy < minDist * minDist;
+    });
+    if (!collisions) {
+      return toArcGis(candidate);
+    }
+    //Move to the next point on the 30 degree sptial
     angle += Math.PI / 6;
-    const distance = baseStep * (1 + attempt / 6);
-    newX = x + Math.cos(angle) * distance;
-    newY = y + Math.sin(angle) * distance;
-    attempt++;
+    const distiance = baseStep * (1 + attempt / 6);
+    newX = x + Math.cos(angle) * distiance;
+    newY = y + Math.sin(angle) * distiance;
+    ++attempt;
   }
-
-  // fallback: return original screen coords (we will still draw)
-  return { x, y };
+  //if exhausted all attempted wee fall back to riginal center.
+  return new ArcGISPoint({ latitude: y, longitude: x });
 }
-
-// Minimum separation between bubbles in degrees (~0.05 = ~5km)
+// Minimum separation (~0.05 deg ≈ 5km)
 const BUBBLE_SEPARATION = 0.05;
 
 export function placeBubble(
@@ -171,20 +215,13 @@ export function placeBubble(
 
   let angle = 0;
   let radius = 0;
-  let foundSpot = false;
 
-  // Try up to 50 nudges to avoid collisions
   for (let i = 0; i < 50; i++) {
     const conflict = placed.some(
       (p) => Math.hypot(p.lat - lat, p.lng - lng) < BUBBLE_SEPARATION
     );
+    if (!conflict) break;
 
-    if (!conflict) {
-      foundSpot = true;
-      break;
-    }
-
-    // Nudge in a spiral around original point
     angle += Math.PI / 6;
     radius += 0.02;
     lat = Math.max(
@@ -205,18 +242,17 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
 
   if (!mapView) return legendLayer;
 
-  const offsetX = 60.18; // tweak to fit top-right
+  const offsetX = 60.18;
   const offsetY = 31.35;
-  const baseLng = offsetX; // top-left longitude
+  const baseLng = offsetX;
   const baseLat = offsetY;
 
-  // rectangle container
   const rect = new Graphic({
     geometry: {
       type: 'extent',
       xmin: baseLng,
-      ymin: baseLat - 3.1, // height of rectangle
-      xmax: baseLng + 3.3, // width of rectangle
+      ymin: baseLat - 3.1,
+      xmax: baseLng + 3.3,
       ymax: baseLat,
       spatialReference: { wkid: 4326 },
     },
@@ -227,7 +263,6 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
   });
   legendLayer.add(rect);
 
-  // title
   const title = new Graphic({
     geometry: new Point({
       longitude: baseLng + 1.6,
@@ -242,19 +277,16 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
   });
   legendLayer.add(title);
 
-  // tile definitions
-
-  tilesArray.forEach((tile,  i: number) => {
+  tilesArray.forEach((tile, i: number) => {
     const row = Math.floor(i / 2);
     const col = i % 2;
 
-    const tileWidth = 1.4; // slightly wider
-    const tileHeight = 0.6; // slightly taller
+    const tileWidth = 1.4;
+    const tileHeight = 0.6;
 
-    const tileX = baseLng + 0.2 + col * 1.6; // horizontal spacing
-    const tileY = baseLat - 0.7 - row * 0.8; // vertical spacing
+    const tileX = baseLng + 0.2 + col * 1.6;
+    const tileY = baseLat - 0.7 - row * 0.8;
 
-    // Tile rectangle
     const tileRect = new Graphic({
       geometry: {
         type: 'extent',
@@ -266,12 +298,13 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
       },
       symbol: new SimpleFillSymbol({
         color: tile.color,
-        outline: tilesMap.get(tile.label) ? { color: [0, 0, 0], width: 1 } : null,
+        outline: tilesMap.get(tile.label)
+          ? { color: [0, 0, 0], width: 1 }
+          : null,
       }),
     });
     legendLayer.add(tileRect);
 
-    // Text inside tile (centered)
     const label = new Graphic({
       geometry: new Point({
         longitude: tileX + tileWidth / 2,
@@ -280,24 +313,21 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
       }),
       symbol: new TextSymbol({
         text: tile.label,
-        font: { size: 9, family: 'Arial', weight: 'bold' }, // slightly smaller
+        font: { size: 9, family: 'Arial', weight: 'bold' },
         color: [0, 0, 0],
         horizontalAlignment: 'center',
         verticalAlignment: 'middle',
-        yoffset: 0,
-        xoffset: 0,
       }),
     });
     legendLayer.add(label);
   });
 
-  // Fifth tile: Target Aquifer
-  const aquiferTileWidth = 3; // wider to fit text
+  // Target Aquifer
+  const aquiferTileWidth = 3;
   const aquiferTileHeight = 0.6;
   const aquiferX = baseLng + 0.2;
-  const aquiferY = baseLat - 2.4; // below the 2 rows of main tiles
+  const aquiferY = baseLat - 2.4;
 
-  // Tile rectangle
   const aquiferRect = new Graphic({
     geometry: {
       type: 'extent',
@@ -308,13 +338,12 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
       spatialReference: { wkid: 4326 },
     },
     symbol: new SimpleFillSymbol({
-      color: [200, 200, 255, 0.8], // light blue
+      color: [200, 200, 255, 0.8],
       outline: { color: [0, 0, 0], width: 1 },
     }),
   });
   legendLayer.add(aquiferRect);
 
-  // Text inside the aquifer tile
   const aquiferLabel = new Graphic({
     geometry: new Point({
       longitude: aquiferX + aquiferTileWidth / 2,
@@ -332,4 +361,25 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
   legendLayer.add(aquiferLabel);
 
   return legendLayer;
+}
+
+// === WRAPPED OBJECT FOR TESTING ===
+export let rigUtils = {
+  findNonOverlappingPosition,
+};
+
+export function translatePolygon(
+  template: Polygon,
+  lng: number,
+  lat: number
+): Polygon {
+  const poly = template.clone() as Polygon;
+  const rings = poly.rings as number[][][];
+  for (const ring of rings) {
+    for (const pt of ring) {
+      pt[0] += lng;
+      pt[1] += lat;
+    }
+  }
+  return poly;
 }
