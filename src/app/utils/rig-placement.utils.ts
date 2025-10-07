@@ -238,7 +238,7 @@ export function placeBubble(
 }
 
 export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
-  const legendLayer = new GraphicsLayer({ title: 'Legend' });
+  const legendLayer = new GraphicsLayer({ title: 'Legend', visible: false });
 
   if (!mapView) return legendLayer;
 

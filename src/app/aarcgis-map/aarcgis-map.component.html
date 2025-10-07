@@ -1,12 +1,9 @@
-<div #mapViewNode style="height: 90vh; width: 100%;"></div>
+<mat-card class="map-card">
+  <mat-card-title> My Arcgis Team Map</mat-card-title>
+  <div #mapViewNode style="height: 90vh; width: 100%;"></div>
 
-<button (click)="saveMapImage()" 
-        style="position: fixed; top: 10px; right: 10px; z-index: 1000; padding: 6px 10px; font-size: 13px;">
-  Save Map 📷
-</button>
-
-<!-- Outer Legend Box -->
-<!-- <div class="legend-container">
+  <!-- Outer Legend Box -->
+<div class="legend-container">
   <h4>Well Ownership</h4>
   <div class="custom-legend">
     <div class="legend-tile green-tile">B1-B33</div>
@@ -15,4 +12,12 @@
     <div class="legend-tile orange-tile">B2-64</div>
     <div class="legend-tile aquifer-tile">Target Aquifer</div>
   </div>
-</div> -->
+</div>
+</mat-card>
+
+<button (click)="saveMapImage()" 
+        style="position: fixed; top: 10px; right: 10px; z-index: 1000; padding: 6px 10px; font-size: 13px;">
+  Save Map 📷
+</button>
+
+

@@ -96,11 +96,11 @@ export const STYLE = {
 export const topPolygonTemplate = new Polygon({
   rings: [
     [
-      [-0.9, 0.3],
-      [0.9, 0.3],
-      [0.9, 0],
-      [-0.9, 0],
-      [-0.9, 0.3],
+      [-1.1, 0.4],
+      [1.1, 0.3],
+      [1.1, 0],
+      [-1.1, 0],
+      [-1.1, 0.4],
     ],
   ],
   spatialReference: {wkid: 4326},

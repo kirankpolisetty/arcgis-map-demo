@@ -24,7 +24,7 @@ import {
   locationTextSymbol,
   bottomPolygonTemplate,
   STYLE,
-  MAP_CONFIG
+  MAP_CONFIG,
 } from '../utils/map.config';
 import {
   createLegendLayer,
@@ -35,10 +35,11 @@ import {
 import { Rig } from '../water-well';
 import Point from '@arcgis/core/geometry/Point';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import { MatCard, MatCardTitle } from '@angular/material/card';
 
 @Component({
   selector: 'app-arcgis-map',
-  imports: [HttpClientModule],
+  imports: [HttpClientModule, MatCardTitle, MatCard],
   templateUrl: './aarcgis-map.component.html',
   styleUrls: ['./aarcgis-map.component.css'],
   standalone: true,
@@ -46,6 +47,7 @@ import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
   mapView?: __esri.MapView;
+  legendLayer: GraphicsLayer | undefined;
   rigs: Rig[] = [];
   errorMessage: string | null = '';
   private placedBubbles: { x: number; y: number; radius: number }[] = [];
@@ -96,7 +98,8 @@ export class ArcgisMapComponent implements OnInit {
     map.addMany([rigLayer, bubbleLayer]);
 
     await this.mapView.when(() => {
-      this.mapView?.map?.add(createLegendLayer(this.mapView));
+      this.legendLayer = createLegendLayer(this.mapView);
+      this.mapView?.map?.add(this.legendLayer);
     });
 
     // 1) draw rig icons (oil rig SVG)
@@ -155,7 +158,11 @@ export class ArcgisMapComponent implements OnInit {
     const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
     const iconRadius = STYLE.markerSize / 2;
     const graphics: Graphic[] = [];
-    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: {wkid: 4326} });
+    const anchorPt = new Point({
+      latitude: 0,
+      longitude: 0,
+      spatialReference: { wkid: 4326 },
+    });
     for (const wwell of this.rigs) {
       anchorPt.latitude = wwell.lat;
       anchorPt.longitude = wwell.lng;
@@ -233,7 +240,7 @@ export class ArcgisMapComponent implements OnInit {
       const bubbleBUttom = new Graphic({
         geometry: botomPoly,
         symbol: new SimpleFillSymbol({
-          color: [0,191,255,0.0],
+          color: [0, 191, 255, 0.0],
           outline: { color: [0, 0, 0], width: 1 },
         }),
       });
@@ -243,7 +250,6 @@ export class ArcgisMapComponent implements OnInit {
         symbol: wwellIdTextSymbol(STYLE.textFont as any),
       });
       (wwellIdLabel.symbol as TextSymbol).text = `${wwell.rigId}`;
-      
 
       const locationLabel = new Graphic({
         geometry: finalMapPoint,
@@ -251,25 +257,75 @@ export class ArcgisMapComponent implements OnInit {
       });
       (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
 
-
-      graphics.push(stick, bubbleTop, bubbleBUttom, wwellIdLabel,locationLabel);
+      graphics.push(
+        stick,
+        bubbleTop,
+        bubbleBUttom,
+        wwellIdLabel,
+        locationLabel
+      );
     }
     layer.addMany(graphics);
   }
 
-  async saveMapImage() {
-    if (!this.mapView) return alert('Map is not ready yet!');
+  async saveMapImage(): Promise<void> {
     try {
-      const screenshot = await this.mapView.takeScreenshot({
-        format: 'png',
-        quality: 1,
-      });
-      const a = document.createElement('a');
-      a.href = screenshot.dataUrl;
-      a.download = 'water-wells-map.png';
-      a.click();
-    } catch (error) {
-      console.error('Error taking screenshot:', error);
+      const base64 = await this.getScreenshotBase64();
+      this.downloadBase64(base64, 'water-wells-map.png');
+    } catch (err) {
+      console.error('Error taking screenshot...', err);
     }
   }
+
+  /* Return the current map view as a Base-64 string (without the data.url prefix). */
+  async captureMapRedBase64(): Promise<string> {
+    return this.getScreenshotBase64(); // any error will propagate to the caller
+  }
+
+  private async getScreenshotBase64(): Promise<string> {
+    if (!this.mapView) {
+      throw new Error('Map view is not defined');
+    }
+
+    const screenshot = await this.mapView.takeScreenshot({
+      format: 'png',
+      quality: 1,
+    });
+
+    this.legendLayer!.visible = true;
+    await new Promise((r) => setTimeout(r, 300));
+    const [, rawBase64] = screenshot.dataUrl.split(',');
+    this.legendLayer!.visible = false;
+    return rawBase64;
+  }
+
+  private downloadBase64(base64: string, fileName: string): void {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // async saveMapImage() {
+  //   if (!this.mapView) return alert('Map is not ready yet!');
+
+  //   try {
+  //     this.legendLayer!.visible = true;
+  //     await new Promise((r) => setTimeout(r, 300));
+  //     const screenshot = await this.mapView.takeScreenshot({
+  //       format: 'png',
+  //       quality: 1,
+  //     });
+  //     // Hide it again
+  //     this.legendLayer!.visible = false;
+  //     const a = document.createElement('a');
+  //     a.href = screenshot.dataUrl;
+  //     a.download = 'water-wells-map.png';
+  //     a.click();
+  //   } catch (error) {
+  //     console.error('Error taking screenshot:', error);
+  //   }
+  // }
 }
