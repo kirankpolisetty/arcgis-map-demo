@@ -147,7 +147,7 @@ export class ArcgisMapComponent implements OnInit {
 
   //
 
-  private layoutBubbles(layer: GraphicsLayer) {
+   layoutBubbles(layer: GraphicsLayer) {
     if (!this.mapView) return;
     layer.removeAll();
     this.placedBubbles = [];
