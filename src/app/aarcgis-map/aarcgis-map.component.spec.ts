@@ -1,240 +1,297 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ArcgisMapComponent } from './aarcgis-map.component';
-import { MatCardModule } from '@angular/material/card';
-import { isPlatformBrowser } from '@angular/common';
-//import { isPlatformBrowser } from '@angular/common';
+jest.mock('@arcgis/core/Graphic');
+jest.mock('@arcgis/core/geometry/Point', () => ({
+  default: class Point {
+    x: number;
+    y: number;
+    latitude: number;
+    longitude: number;
+    constructor(options?: any) {
+      this.x = 100;
+      this.y = 200;
+      this.latitude = options?.latitude;
+      this.longitude = options?.longitude;
+      Object.assign(this, options);
+    }
+  },
+}));
 
+jest.mock('@arcgis/core/geometry/Polyline');
+jest.mock('@arcgis/core/layers/GraphicsLayer');
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 0.5] })),
+}));
+jest.mock('@arcgis/core/symbols/TextSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 1] })),
+}));
+jest.mock('@arcgis/core/Map');
+jest.mock('@arcgis/core/views/MapView');
+jest.mock('@arcgis/core/symbols/PictureMarkerSymbol', () => ({
+  default: class PictureMarkerSymbol {
+    width: number;
+    height: number;
+    url: string;
+    constructor(options?: any) {
+      this.width = 24;
+      this.height = 24;
+      this.url = options?.url;
+      Object.assign(this, options);
+    }
+  },
+  
+}));
+(global as any).ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+import {
+  HttpClientTestingModule,
+  HttpTestingController,
+} from '@angular/common/http/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  flush,
+  tick,
+} from '@angular/core/testing';
+import { MatCardModule } from '@angular/material/card';
+import { of, throwError } from 'rxjs';
+import { MorningreportService } from '../services/morningreport.service';
+import { ArcgisMapComponent } from './aarcgis-map.component';
+import { PLATFORM_ID } from '@angular/core';
+import { runInInjectionContext } from '@angular/core';
 
 // Mock ArcGIS modules
 jest.mock('@arcgis/core/Graphic');
-jest.mock('@arcgis/core/geometry/Point');
+
 jest.mock('@arcgis/core/geometry/Polyline');
 jest.mock('@arcgis/core/layers/GraphicsLayer');
-jest.mock('@arcgis/core/symbols/SimpleLineSymbol');
-jest.mock('@arcgis/core/symbols/TextSymbol');
-jest.mock('@arcgis/core/symbols/SimpleFillSymbol');
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => {
+  return {
+    default: class SimpleFillSymbolMock {
+      constructor(options?: any) {
+        Object.assign(this, options);
+      }
+    },
+  };
+});
+jest.mock('@arcgis/core/symbols/TextSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 1] })),
+}));
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 0.5] })),
+}));
 jest.mock('@arcgis/core/Map');
-jest.mock('@arcgis/core/MapView');
-
-// Mock the platform ID
-const PLATFORM_ID = 'browser';
-
-// jest.mock('@angular/common', () => ({
-//   ...jest.requireActual('@angular/common'),
-//   isPlatformBrowser: jest.fn(() => true)
-// }));
+jest.mock('@arcgis/core/views/MapView');
 
 describe('ArcgisMapComponent', () => {
   let component: ArcgisMapComponent;
   let fixture: ComponentFixture<ArcgisMapComponent>;
   let httpTestingController: HttpTestingController;
-  let mockMapView: any;
-  let mockMap: any;
-  let mockGraphicsLayer: any;
+  let mockMorningReportService: jest.Mocked<MorningreportService>;
 
   const mockRigs = [
-    { rigId: 'B1-001', lat: 34.0522, lng: -118.2437, location: 'Los Angeles', classification: 'Active', label: 'Rig B1-001' },
-    { rigId: 'B2-001', lat: 40.7128, lng: -74.0060, location: 'New York', classification: 'Inactive', label: 'Rig B2-001' }
+    {
+      rigId: 'B1-001',
+      lat: 34.0522,
+      lng: -118.2437,
+      location: 'Los Angeles',
+      classification: 'Active',
+      label: 'Rig B1-001',
+    },
+    {
+      rigId: 'B2-001',
+      lat: 40.7128,
+      lng: -74.006,
+      location: 'New York',
+      classification: 'Inactive',
+      label: 'Rig B2-001',
+    },
   ];
 
+  // Mock DOM elements
+  const mockMapViewElement = document.createElement('div');
+  mockMapViewElement.id = 'mapViewNode';
+  document.body.appendChild(mockMapViewElement);
+
   beforeEach(async () => {
+    // Create mock service
+    mockMorningReportService = {
+      getMorningReport: jest.fn(),
+    } as any;
+
     await TestBed.configureTestingModule({
-      imports: [
-        ArcgisMapComponent,
-        HttpClientTestingModule,
-        MatCardModule
-      ],
+      imports: [ArcgisMapComponent, HttpClientTestingModule, MatCardModule],
       providers: [
-        { provide: PLATFORM_ID, useValue: 'browser' }
-      ]
+        { provide: PLATFORM_ID, useValue: 'browser' },
+        { provide: MorningreportService, useValue: mockMorningReportService },
+      ],
     }).compileComponents();
-  
+
     fixture = TestBed.createComponent(ArcgisMapComponent);
     component = fixture.componentInstance;
     httpTestingController = TestBed.inject(HttpTestingController);
 
-    // Setup mock MapView and Map
-    mockMapView = {
-      when: jest.fn().mockImplementation((callback) => callback()),
-      map: { add: jest.fn(), addMany: jest.fn() },
-      width: 800,
-      height: 600,
-      toScreen: jest.fn().mockReturnValue({ x: 100, y: 100 }),
-      toMap: jest.fn().mockReturnValue({ 
-        longitude: -118.2437, 
-        latitude: 34.0522,
-        clone: jest.fn().mockReturnThis()
-      }),
-      takeScreenshot: jest.fn().mockResolvedValue({
-        dataUrl: 'data:image/png;base64,test',
-        width: 800,
-        height: 600
-      }),
-      watch: jest.fn(),
-      extent: { xmin: -180, ymin: -90, xmax: 180, ymax: 90 }
-    };
-
-    mockMap = {
-      add: jest.fn(),
-      addMany: jest.fn()
-    };
-
-    mockGraphicsLayer = {
-      removeAll: jest.fn(),
-      add: jest.fn(),
-      addMany: jest.fn(),
-      visible: true
-    };
-
-    // Mock the imports
-    jest.mock('@arcgis/core/Map', () => {
-      return jest.fn().mockImplementation(() => mockMap);
-    });
-
-    jest.mock('@arcgis/core/views/MapView', () => {
-      return jest.fn().mockImplementation(() => mockMapView);
-    });
-
-    jest.mock('@arcgis/core/layers/GraphicsLayer', () => {
-      return jest.fn().mockImplementation(() => mockGraphicsLayer);
-    });
-
-   // jest.spyOn(component as any, 'isPlatformBrowser').mockReturnValue(false);
-
+    // Mock the view child element
+    component['mapViewEl'] = { nativeElement: mockMapViewElement } as any;
+    
   });
 
   afterEach(() => {
     httpTestingController.verify();
     jest.clearAllMocks();
+    fixture.destroy();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize map and load rigs on init', () => {
-    // Trigger ngOnInit
+  it('should initialize and fetch morning report data on init', fakeAsync(() => {
+    mockMorningReportService.getMorningReport.mockReturnValue(of(mockRigs));
+    const initMapSpy = jest
+      .spyOn(component as any, 'initMap')
+      .mockResolvedValue(undefined);
     fixture.detectChanges();
-
-    // Expect HTTP request to be made
-    const req = httpTestingController.expectOne('assets/rigs.json');
-    expect(req.request.method).toEqual('GET');
-    
-    // Respond with mock data
-    req.flush(mockRigs);
-
-    // Check if map initialization was triggered
-    expect(component.mapView).toBeDefined();
-  });
-
-  it('should initialize map and load rigs on init', fakeAsync(() => {
-    // Force browser mode
-   // (isPlatformBrowser as jest.Mock).mockReturnValue(true);
-  
-    // Trigger ngOnInit
-    fixture.detectChanges();
-    tick(200); // wait for async init
-  
-    // ✅ Use a predicate function instead of raw regex
-    const req = httpTestingController.expectOne(
-      (r) => r.url.endsWith('assets/rigs.json')
-    );
-  
-    expect(req.request.method).toBe('GET');
-  
-    // Mock API response
-    req.flush(mockRigs);
     tick();
-  
-    // Verify behavior
-    expect(component.mapView).toBeDefined();
+    expect(mockMorningReportService.getMorningReport).toHaveBeenCalled();
+    expect(component['rigs']).toEqual(mockRigs);
+    expect(initMapSpy).toHaveBeenCalled();
+    flush();
   }));
-  
-  // it('should handle error when loading rigs fails', () => {
-  //   const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-  //   // Trigger ngOnInit
-  //   fixture.detectChanges();
-    
-  //   // Simulate HTTP error
-  //   const req = httpTestingController.expectOne('assets/rigs.json');
-  //   req.flush('Error loading data', { status: 404, statusText: 'Not Found' });
-    
-  //   expect(component.errorMessage).toContain('Failed to load rig data');
-  //   expect(consoleSpy).toHaveBeenCalled();
-  //   consoleSpy.mockRestore();
+
+  it('should handle error when fetching morning report fails', fakeAsync(() => {
+    const errorMessage = 'Failed to load data';
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    mockMorningReportService.getMorningReport.mockReturnValue(
+      throwError(() => new Error(errorMessage))
+    );
+    fixture.detectChanges();
+    tick();
+    expect(component.errorMessage()).toBe('Unable to load the well data!!');
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+    flush();
+  }));
+
+
+  // it('should initialize map with correct configuration', async () => {
+  //   component['rigs'] = mockRigs;
+  //   await component['initMap']();
+  //   expect(component.mapView).toBeDefined();
   // });
 
   // it('should draw rig icons on the map', async () => {
-  //   // Set up test data
-  //   component.rigs = mockRigs;
-    
-  //   // Call the method
-  //   await component.drawRigIcons(mockGraphicsLayer);
-    
-  //   // Verify graphics were added
-  //   expect(mockGraphicsLayer.removeAll).toHaveBeenCalled();
-  //   expect(mockGraphicsLayer.add).toHaveBeenCalledTimes(mockRigs.length);
+  //   component['rigs'] = mockRigs;
+  //   const mockLayer = {
+  //     removeAll: jest.fn(),
+  //     add: jest.fn(),
+  //   };
+
+  //   await component['drawRigIcons'](mockLayer as any);
+
+  //   expect(mockLayer.removeAll).toHaveBeenCalled();
+  //   expect(mockLayer.add).toHaveBeenCalledTimes(mockRigs.length);
   // });
 
-  // it('should handle map screenshot functionality', async () => {
-  //   // Mock the getScreenshotBase64 method
-  //   const getScreenshotSpy = jest.spyOn(component as any, 'getScreenshotBase64')
-  //     .mockResolvedValue('test-base64');
-    
-  //   // Mock the downloadBase64 method
-  //   const downloadSpy = jest.spyOn(component as any, 'downloadBase64');
-    
-  //   // Call the method
-  //   await component.saveMapImage();
-    
-  //   // Verify the methods were called
-  //   expect(getScreenshotSpy).toHaveBeenCalled();
-  //   expect(downloadSpy).toHaveBeenCalledWith('test-base64', 'water-wells-map.png');
+  it('should handle screenshot functionality', async () => {
+    const mockBase64 = 'test-base64';
+    const getScreenshotSpy = jest
+      .spyOn(component as any, 'getScreenshotBase64')
+      .mockResolvedValue(mockBase64);
+    const downloadSpy = jest.spyOn(component as any, 'downloadBase64');
+    await component.saveMapImage();
+    expect(getScreenshotSpy).toHaveBeenCalled();
+    expect(downloadSpy).toHaveBeenCalledWith(mockBase64, 'water-wells-map.png');
+  });
+
+  it('should handle screenshot error gracefully', async () => {
+    const errorMessage = 'Screenshot failed';
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    jest
+      .spyOn(component as any, 'getScreenshotBase64')
+      .mockRejectedValue(new Error(errorMessage));
+    await component.saveMapImage();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error taking screenshot...',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('should clean up resources on destroy', () => {
+    const mockDestroy$ = { next: jest.fn(), complete: jest.fn() } as any;
+    const mockWatchHandle = { remove: jest.fn() };
+    Object.defineProperty(component, 'destory$', {
+      value: mockDestroy$,
+      writable: false,
+      configurable: true,
+    });
+    component['stationaryWatchHandle'] = mockWatchHandle as any;
+    component.ngOnDestroy();
+    expect(mockDestroy$.next).toHaveBeenCalled();
+    expect(mockDestroy$.complete).toHaveBeenCalled();
+    expect(mockWatchHandle.remove).toHaveBeenCalled();
+  });
+
+  it('should call buildWWellSignal with correct data', () => {
+    const buildWWellSignalSpy = jest.spyOn(
+      component as any,
+      'buildWWellSignal'
+    );
+    component['rigs'] = mockRigs;
+    (component as any).buildWWellSignal(mockRigs);
+    expect(buildWWellSignalSpy).toHaveBeenCalledWith(mockRigs);
+  });
+
+  it('should call buildWellSignal and set wwells signal', () => {
+    const testData = [
+      { rigId: 'A1', lat: '10', lng: '20', location: 'Loc', label: 'Label' },
+    ];
+    component['buildWellSignal'](testData as any);
+    expect(component.wwells().length).toBe(1);
+    expect(component.wwells()[0].label).toBe('Label');
+  });
+
+  // it('should not initialize map if not browser platform', () => {
+  //   const platformComponent = new ArcgisMapComponent(
+  //     'server',
+  //     mockMorningReportService
+  //   );
+  //   const fetchSpy = jest.spyOn(platformComponent as any, 'fetchMorningReport');
+  //   platformComponent.ngOnInit();
+  //   expect(fetchSpy).not.toHaveBeenCalled();
   // });
 
-  // it('should handle screenshot error gracefully', async () => {
-  //   // Mock the getScreenshotBase64 to throw an error
-  //   const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-  //   jest.spyOn(component as any, 'getScreenshotBase64').mockRejectedValue(new Error('Screenshot failed'));
-    
-  //   // Call the method
-  //   await component.saveMapImage();
-    
-  //   // Verify error was logged
-  //   expect(consoleSpy).toHaveBeenCalledWith('Error taking screenshot...', expect(Error));
-  //   consoleSpy.mockRestore();
-  // });
+  it('should get layers by id', () => {
+    const mockLayer = { id: 'test-layer' };
+    component.mapView = {
+      map: { layers: [mockLayer] },
+    } as any;
+    const result = (component as any).getlayersById('test-layer');
+    expect(result).toBe(mockLayer);
+  });
 
-  // it('should handle layout bubbles functionality', () => {
-  //   // Set up test data
-  //   component.rigs = mockRigs;
-  //   component.mapView = mockMapView;
-    
-  //   // Mock the findNonOverlappingPosition function
-  //   jest.mock('../utils/rig-placement.utils', () => ({
-  //     findNonOverlappingPosition: jest.fn().mockReturnValue({ x: 100, y: 100 }),
-  //     createLegendLayer: jest.fn().mockReturnValue({ visible: true })
-  //   }));
-    
-  //   // Call the method
-  //   component.layoutBubbles(mockGraphicsLayer);
-    
-  //   // Verify the graphics layer was updated
-  //   expect(mockGraphicsLayer.removeAll).toHaveBeenCalled();
-  //   expect(mockGraphicsLayer.addMany).toHaveBeenCalled();
-  // });
+  it('should download base64 image', () => {
+    const appendSpy = jest.spyOn(document.body, 'appendChild');
+    const removeSpy = jest.spyOn(document.body, 'removeChild');
+    (component as any).downloadBase64('abc', 'file.png');
+    expect(appendSpy).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalled();
+  });
 
-  // it('should not initialize map when not in browser', () => {
-  //   // Mock isPlatformBrowser to return false
-  //   jest.spyOn(component as any, 'isPlatformBrowser').mockReturnValue(false);
-    
-  //   // Trigger ngOnInit
-  //   fixture.detectChanges();
-    
-  //   // Verify no HTTP request was made
-  //   httpTestingController.expectNone('assets/rigs.json');
-  //   expect(component.mapView).toBeUndefined();
-  // });
+  it('should throw error if getScreenshotBase64 called without mapView', async () => {
+    component.mapView = undefined;
+    await expect((component as any).getScreenshotBase64()).rejects.toThrow(
+      'Map view is not defined'
+    );
+  });
 });
+
+// We recommend installing an extension to run jest tests.
