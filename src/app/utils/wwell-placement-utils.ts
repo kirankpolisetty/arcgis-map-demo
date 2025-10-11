@@ -1,22 +1,22 @@
-import Graphic from '@arcgis/core/Graphic';
 import Point from '@arcgis/core/geometry/Point';
+import Polygon from '@arcgis/core/geometry/Polygon';
+import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { RigGraphics } from '../water-well';
 import {
   ArcGISPoint,
   BubblePOint,
   MAP_BOUNDS,
   tilesArray,
   tilesMap,
+  WWellGraphics,
 } from './map.config';
-import Polygon from '@arcgis/core/geometry/Polygon';
 
 // === HELPERS ===
 export function isValidPlacement(
   bubblePoint: Point | null | undefined,
-  existing: RigGraphics[],
+  existing: WWellGraphics[],
   bubbleRadius: number
 ): boolean {
   if (!bubblePoint) return false;
@@ -27,73 +27,9 @@ export function isValidPlacement(
     const dx = bubblePoint.longitude! - e.bubble.longitude!;
     const dy = bubblePoint.latitude! - e.bubble.latitude!;
     const distance = Math.sqrt(dx * dx + dy * dy);
-
     return distance < bubbleRadius * 2;
   });
 }
-
-// export function generateSquarePositions(
-//   lat: number,
-//   lng: number,
-//   radius: number,
-//   count: number
-// ): Point[] {
-//   const positions: Point[] = [];
-//   const sr = { wkid: 4326 };
-
-//   let step = 1; // how far we move out
-//   let direction = 0; // 0=right,1=down,2=left,3=up
-//   let dx = 1,
-//     dy = 0; // movement vector
-//   let x = 0,
-//     y = 0; // grid offsets
-
-//   while (positions.length < count) {
-//     positions.push(
-//       new Point({
-//         latitude: lat + y * radius,
-//         longitude: lng + x * radius,
-//         spatialReference: sr,
-//       })
-//     );
-
-//     // move
-//     x += dx;
-//     y += dy;
-
-//     // change direction when needed
-//     if (
-//       (direction === 0 && x === step) ||
-//       (direction === 1 && y === step) ||
-//       (direction === 2 && x === -step) ||
-//       (direction === 3 && y === -step)
-//     ) {
-//       direction = (direction + 1) % 4;
-
-//       if (direction === 0 || direction === 2) step++; // expand spiral size
-
-//       // update movement vector
-//       if (direction === 0) {
-//         dx = 1;
-//         dy = 0;
-//       }
-//       if (direction === 1) {
-//         dx = 0;
-//         dy = 1;
-//       }
-//       if (direction === 2) {
-//         dx = -1;
-//         dy = 0;
-//       }
-//       if (direction === 3) {
-//         dx = 0;
-//         dy = -1;
-//       }
-//     }
-//   }
-
-//   return positions;
-// }
 
 export function generateSquarePositions(
   lat: number,
@@ -121,39 +57,6 @@ export function getBubbleRadius(mapView: __esri.MapView): number {
   const zoom = mapView.zoom;
   return zoom >= 10 ? 0.01 : zoom >= 8 ? 0.05 : 0.1;
 }
-
-
-// === Main function ===
-// export function findNonOverlappingPosition(
-//   x: number,
-//   y: number,
-//   placedBubbles: { x: number; y: number; radius: number }[],
-//   radius: number
-// ): { x: number; y: number } {
-//   const maxAttempts = 60;
-//   const baseStep = radius * 1.5;
-//   let angle = 0;
-//   let attempt = 0;
-
-//   let newX = x;
-//   let newY = y;
-
-//   while (attempt < maxAttempts) {
-//     const overlapping = placedBubbles.some(
-//       (b) => Math.hypot(b.x - newX, b.y - newY) < b.radius + radius + 2
-//     );
-//     if (!overlapping) return { x: newX, y: newY };
-
-//     angle += Math.PI / 6;
-//     const distance = baseStep * (1 + attempt / 6);
-//     newX = x + Math.cos(angle) * distance;
-//     newY = y + Math.sin(angle) * distance;
-//     attempt++;
-//   }
-
-//   return { x, y };
-// }
-
 export function toArcGis(p: BubblePOint): ArcGISPoint {
   return new ArcGISPoint(p);
 }
@@ -233,7 +136,6 @@ export function placeBubble(
       Math.min(rig.lng + radius * Math.cos(angle), MAP_BOUNDS.maxLng)
     );
   }
-
   return { lat, lng };
 }
 
@@ -367,6 +269,10 @@ export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
 export let rigUtils = {
   findNonOverlappingPosition,
 };
+
+export function toArcGIS(p: BubblePOint): ArcGISPoint {
+    return new ArcGISPoint();
+}
 
 export function translatePolygon(
   template: Polygon,

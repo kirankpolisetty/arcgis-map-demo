@@ -11,5 +11,6 @@ import { ArcgisMapComponent } from './aarcgis-map/aarcgis-map.component';
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  
   title = 'arcgis-map-demo';
 }

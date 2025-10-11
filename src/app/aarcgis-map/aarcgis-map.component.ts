@@ -1,41 +1,45 @@
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   Inject,
   OnInit,
   PLATFORM_ID,
   ViewChild,
+  effect,
+  signal,
 } from '@angular/core';
 // ArcGIS core
+import { MatCard, MatCardTitle } from '@angular/material/card';
 import Graphic from '@arcgis/core/Graphic';
+import Point from '@arcgis/core/geometry/Point';
 import Polyline from '@arcgis/core/geometry/Polyline';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { catchError, of } from 'rxjs';
+import { MorningreportService } from '../services/morningreport.service';
 import {
   MAP_BOUNDS,
+  MAP_CONFIG,
+  STYLE,
+  WWell,
+  bottomPolygonTemplate,
   lineSymbol,
+  locationTextSymbol,
   tilesMap,
   topPolygonTemplate,
   wwellIdTextSymbol,
-  locationTextSymbol,
-  bottomPolygonTemplate,
-  STYLE,
-  MAP_CONFIG,
 } from '../utils/map.config';
 import {
   createLegendLayer,
   findNonOverlappingPosition,
-  rigUtils,
   translatePolygon,
-} from '../utils/rig-placement.utils';
+} from '../utils/wwell-placement-utils';
+
+import { Subject, takeUntil } from 'rxjs';
 import { Rig } from '../water-well';
-import Point from '@arcgis/core/geometry/Point';
-import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
-import { MatCard, MatCardTitle } from '@angular/material/card';
 
 @Component({
   selector: 'app-arcgis-map',
@@ -47,32 +51,75 @@ import { MatCard, MatCardTitle } from '@angular/material/card';
 export class ArcgisMapComponent implements OnInit {
   @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
   mapView?: __esri.MapView;
-  legendLayer: GraphicsLayer | undefined;
-  rigs: Rig[] = [];
-  errorMessage: string | null = '';
+  //signals
+  readonly wwells = signal<WWell[]>([]);
+  readonly errorMessage = signal<string | null>(null);
+  private readonly mapReady = signal<boolean>(false);
+  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
+
   private placedBubbles: { x: number; y: number; radius: number }[] = [];
+  private rigs: Rig[] = [];
+  private readonly destory$ = new Subject<void>();
+  private stationaryWatchHandle?: __esri.WatchHandle;
+  private legendLayer: GraphicsLayer | undefined;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient
-  ) {}
+    private readonly morningService: MorningreportService
+  ) {
+    console.log("<><><");
+    effect(() => {
+      this.wwells();
+      if (!this.mapReady()) return;
+      const wwellLayer = this.getlayersById('WWell-icons') as GraphicsLayer;
+      if (!wwellLayer) return;
+      this.drawRigIcons(wwellLayer).catch((err) => {
+        console.error(err);
+      });
+    });
+    effect(() => {
+      const bubbleLayer = this.bubbleLayerReady();
+      if (bubbleLayer) {
+        this.layoutBubbles(bubbleLayer);
+      }
+    });
+  }
 
   ngOnInit() {
+    console.log(' I am here in the ngOnIiti()');
     if (!isPlatformBrowser(this.platformId)) return;
+    this.fetchMorningReport();
+  }
 
-    this.http
-      .get<Rig[]>('assets/rigs.json')
-      .pipe(
-        catchError((err) => {
-          console.error('***Error loading rigs:***', err);
-          this.errorMessage =
-            'Failed to load rig data. Please check the file path';
-          return of([]);
-        })
-      )
-      .subscribe((data) => {
-        this.rigs = data || [];
-        this.initMap();
+  ngOnDestroy() {
+    this.destory$.next();
+    this.destory$.complete();
+    this.stationaryWatchHandle?.remove();
+  }
+
+  private buildWWellSignal(data: Rig[]): void {
+    const safeNum = (s?: string | null): number => {
+      const n = Number.parseFloat(s ?? '');
+      return Number.isNaN(n) ? 0 : n;
+    };
+  }
+
+  private fetchMorningReport(): void {
+    this.morningService
+      .getMorningReport()
+      .pipe(takeUntil(this.destory$))
+      .subscribe({
+        next: (data: Rig[]) => {
+          this.rigs = data;
+          this.buildWWellSignal(data);
+          this.initMap().catch((err) => {
+            console.error('Init map errr!!');
+          });
+        },
+        error: (err) => {
+          console.error('Failed oto fetch the morning report...', err);
+          this.errorMessage.set('Unable to load the well data!!');
+        },
       });
   }
 
@@ -145,9 +192,27 @@ export class ArcgisMapComponent implements OnInit {
     }
   }
 
-  //
+  private buildWellSignal(data: Rig[]): void {
+    // Helper to safely parse numbers from strings
+    const safeNum = (s?: string | null | number): number => {
+      if (typeof s === 'number') return s; // already a number
+      const n = Number.parseFloat(s ?? '');
+      return Number.isNaN(n) ? 0 : n;
+    };
 
-   layoutBubbles(layer: GraphicsLayer) {
+    const wells: WWell[] = data
+      .map((r) => ({
+        label: r.label ?? 'N/A',
+        lat: safeNum(r.lat),
+        lng: safeNum(r.lng), // assuming WWell has lng too
+        location: r.location ?? 'Unknown',
+      }))
+      .filter((w) => w.lat !== 0); // remove invalid coordinates
+
+    this.wwells.set(wells);
+  }
+
+  private layoutBubbles(layer: GraphicsLayer) {
     if (!this.mapView) return;
     layer.removeAll();
     this.placedBubbles = [];
@@ -306,6 +371,12 @@ export class ArcgisMapComponent implements OnInit {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  private getlayersById(id: string): GraphicsLayer | undefined {
+    return this.mapView?.map?.layers.find((layer) => layer.id === id) as
+      | GraphicsLayer
+      | undefined;
   }
 
   // async saveMapImage() {

@@ -1,8 +1,10 @@
 import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import Polyline from "@arcgis/core/geometry/Polyline";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import TextSymbol from "@arcgis/core/symbols/TextSymbol";
+import { default as _ArcGISPoint } from "@arcgis/core/geometry/Point";
 
 export const MAP_STYLE = {
   markerIcon: 'assets/oil-rig.svg',
@@ -14,6 +16,8 @@ export const MAP_STYLE = {
   textFont: { size: 10, weight: 'bold', family: 'Arial' },
 };
 
+const baseUr = window.location.origin;
+const iconUrl = window.location.origin + "/assets/oil-rig.svg";
 // === CONFIG ===
 export const MAP_CONFIG = {
   center: [49.1383, 24.7866] as [number, number],
@@ -48,11 +52,10 @@ export const tilesMap = new Map<string, {color: number[]; label: string}>(
 
 export { Point as ArcGISPoint};
 
-export const lineSymbol = (color: number[])=> 
+export const lineSymbol = (color: number[])=>
   new SimpleLineSymbol({color, width:2});
 
-
-export const wwellIdTextSymbol = (font: any)=> 
+export const wwellIdTextSymbol = (font: any)=>
 new TextSymbol({
   color: [0,0,0],
   font,
@@ -62,16 +65,12 @@ new TextSymbol({
   yoffset: 8,
 });
 
-
-
-
-
 export interface WWellResult {
   stickGraphic: Graphic;
   bubbleGraphic: Graphic;
 }
 
-export const locationTextSymbol = (font: any) => 
+export const locationTextSymbol = (font: any) =>
 new TextSymbol({
   color: [255,255,20],
   font,
@@ -90,8 +89,8 @@ export const STYLE = {
   stickColor: [10, 40, 0],
   bubbleColor: [0, 255, 0, 0.9],
   textFont: { size: 10, weight: 'bold', family: 'Arial' },
+  legendTextColor: {size: 10, weight: "normal", family:'sans-serif'}
 };
-
 
 export const topPolygonTemplate = new Polygon({
   rings: [
@@ -120,6 +119,13 @@ export const bottomPolygonTemplate = new Polygon({
 })
 
 
+export interface WWellGraphics {
+   wwellId: number;
+   polyline: Polyline;
+   bubble: Point;
+   radius: number
+ }
+
 export interface WWellResult {
   stickGraphic: Graphic,
   bubbleGraphic: Graphic
@@ -129,6 +135,21 @@ export interface BubblePOint {
   latitude: number;
   longitude: number;
 }
+
+export interface WWell {
+  
+  lng: number;
+  location: string;
+  label: string;
+}
+
+
+
+
+
+
+
+
 
 
 
